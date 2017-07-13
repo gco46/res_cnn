@@ -1,5 +1,4 @@
 # coding=utf-8
-# hello world!
 import tools as tl
 import ptools as ptl
 import models
