@@ -2,6 +2,7 @@
 import tools as tl
 import ptools as ptl
 import models
+from models import softmax_sparse_crossentropy, sparse_accuracy
 from keras.utils import np_utils
 from keras.optimizers import SGD, Adam
 from keras.models import model_from_json
@@ -76,4 +77,64 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
     for line in open(mask_list, "r"):
         mask_list.append(line.strip())
 
-    X_train, y_train = load_dataset()
+    DataLoader = Patch_DataLoader(
+        img_list, mask_list, in_size, size, step, method, resolution
+    )
+    X_train, y_train = DataLoader.load_dataset()
+    X_train = X_train.reshape(X_train.shape[0], in_size, in_size, 3)
+    X_train /= 255.
+
+    if method == "classification":
+        y_train = np_utils.to_categorical(y_train, num_classes=3)
+        metrics = "accuracy"
+        loss_f = "categorical_crossentropy"
+    elif method == "regression":
+        metrics = "mse"
+        loss_f = "mean_squared_error"
+    else:
+        metrics = sparse_accuracy
+        loss_f = softmax_sparse_crossentropy
+
+    if arch == "vgg_p5":
+        if method == "fcn":
+            model = models.fcn_p5_full(num_classes)
+        else:
+            model = models.myVGG_p5(size, l2_reg, method, out_num)
+    else:
+        ValueError("now supported to vgg_p5")
+
+    if opt == "SGD":
+        model.compile(loss=loss_f,
+                      optimizer=SGD(lr=lr, momentum=momentum, decay=decay),
+                      metrics=[metrics]
+                      )
+    elif opt == "Adadelta":
+        lr = 1.0
+        decay = 0
+        model.compile(loss=loss_f,
+                      optimizer=Adadelta(),
+                      metrics=[metrics]
+                      )
+    elif opt == "Adam":
+        if momentum == "default":
+            beta1 = 0.9
+            beta2 = 0.999
+            momentum = (beta1, beta2)
+        elif isinstance(momentum, tuple) and len(momentum) == 2:
+            beta1 = momentum[0]
+            beta2 = momeutum[1]
+        else:
+            raise ValueError(
+                "with Adam, momentum must be 2 length of tuple or 'default'")
+        model.compile(loss=loss_f,
+                      optimizer=Adam(
+                          lr=lr, beta_1=beta1, beta_2=beta2, decay=decay),
+                      metrics=[metrics]
+                      )
+    else:
+        raise ValueError("argument 'opt' is wrong.")
+
+    print("train on " + dataset)
+    start_time = timeit.default_timer()
+
+    if method == "fcn":

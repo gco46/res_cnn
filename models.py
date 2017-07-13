@@ -272,7 +272,7 @@ def fcn_p5_full(classes):
     return model
 
 
-def softmax_sparse_crossentropy_ignoring_last_label(y_true, y_pred):
+def softmax_sparse_crossentropy(y_true, y_pred):
     """
     define loss function, categorical_crossentropy for fcn.
     ignore the last number label.
@@ -308,7 +308,7 @@ def softmax_sparse_crossentropy_ignoring_last_label(y_true, y_pred):
     return cross_entropy_sum
 
 
-def sparse_accuracy_ignoring_last_label(y_true, y_pred):
+def sparse_accuracy(y_true, y_pred):
     """
     define accuracy for fcn, ignoring last label.
     y_true: array, (None, )

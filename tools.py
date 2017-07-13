@@ -45,6 +45,21 @@ class Patch_DataLoader(object):
         else:
             self.datatype = 'melanoma'
             self.num_classes = 2
+        self.num_samples = self.count_samples()
+
+    def count_samples(self):
+        """
+        count sample patches.(for fcn training)
+        output: int, number of samples
+        """
+        num_samples = 0
+        for img_path in self.img_list:
+            img = Image.open(img_path)
+            w, h = img.size
+            y_axis = (h - self.size) // self.step + 1
+            x_axis = (w - self.size) // self.step + 1
+            num_samples += x_axis * y_axis
+        return num_samples
 
     def load_data(self):
         """
