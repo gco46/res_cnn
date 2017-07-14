@@ -1,5 +1,6 @@
 # coding=utf-8
 from tools import Patch_DataLoader
+import tools as tl
 # import ptools as ptl
 import models
 from generator import fcn_generator
@@ -74,17 +75,8 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
         pass
     dir_path = os.path.join("weights/valid_all", dataset)
 
-    # dataset のパス指定して.txtからファイルパス読み込み
-    img_txt = "train_data" + dataset[-1] + ".txt"
-    mask_txt = "train_mask" + dataset[-1] + ".txt"
-    img_txt = os.path.join("data", dataset[:-2], "dataset", img_txt)
-    mask_txt = os.path.join("data", dataset[:-2], "dataset", mask_txt)
-    img_list = []
-    mask_list = []
-    for line in open(img_txt, "r"):
-        img_list.append(line.strip())
-    for line in open(mask_txt, "r"):
-        mask_list.append(line.strip())
+    # データのパス読み込み
+    img_list, mask_list = tl.load_datapath(dataset)
 
     # インスタンス化はするが読み込みはあとで行う。
     DataLoader = Patch_DataLoader(

@@ -4,6 +4,26 @@ import numpy as np
 from PIL import Image
 
 
+def load_datapath(dataset):
+    """
+    load data path from .txt file
+    dataset: str, 'ips' or 'melanoma' + '_1' to '_5'
+    output: (list, list), path list of train and test data
+    """
+    # dataset のパス指定して.txtからファイルパス読み込み
+    img_txt = "train_data" + dataset[-1] + ".txt"
+    mask_txt = "train_mask" + dataset[-1] + ".txt"
+    img_txt = os.path.join("data", dataset[:-2], "dataset", img_txt)
+    mask_txt = os.path.join("data", dataset[:-2], "dataset", mask_txt)
+    img_list = []
+    mask_list = []
+    for line in open(img_txt, "r"):
+        img_list.append(line.strip())
+    for line in open(mask_txt, "r"):
+        mask_list.append(line.strip())
+    return img_list.sort(), mask_list.sort()
+
+
 def getFilelist(path, ext):
     """
     get files path which have specified extension as a list recursiveliy.
@@ -122,6 +142,9 @@ class Patch_DataLoader(object):
         mask = np.array(Image.open(mask_path), dtype=int)
         mask = self.image2label(mask)
         h, w, c = img.shape
+        # test用に元画像のサイズを取得しておく
+        self.height = h
+        self.width = w
 
         img_vecs = []
         target_list = []

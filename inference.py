@@ -2,9 +2,10 @@
 from keras.models import model_from_json
 import models
 from tools import Patch_DataLoader
+import tools as tl
 
 
-def test_model(method, dataset, in_size, size, step,
+def test_model(method, dataset, in_size, size, step, resolution,
                model_path="valid"):
     """
     inference
@@ -32,8 +33,42 @@ def test_model(method, dataset, in_size, size, step,
     model.load_weights(os.path.join(
         model_path, dataset, "train_weights.h5"))
 
-    img_txt = "train_data" + dataset[-1] + ".txt"
-    img_txt = os.path.join("data", dataset[:-2], "dataset", img_txt)
-    img_list = []
-    for line in open(img_txt, "r"):
-        img_list.append(line.strip())
+    # データ読み込み
+    img_list, mask_list = tl.load_datapath(dataset)
+    DataLoader = Patch_DataLoader(
+        img_list, mask_list, in_size, size, step, method, resolution
+    )
+
+    print("visualize the result of " + dataset)
+    try:
+        if isinstance(resolution, list):
+            for i in resolution:
+                os.makedirs(
+                    os.path.join(
+                        model_path, dataset,
+                        "hsv" + str(i[0])
+                    )
+                )
+                os.makedirs(
+                    os.path.join(
+                        model_path, dataset,
+                        "label" + str(i[0])
+                    )
+                )
+        else:
+            os.makedirs(
+                os.path.join(model_path, dataset, "hsv")
+            )
+            os.makedirs(
+                os.path.join(model_path, dataset, "label")
+            )
+    except FileExistsError:
+        pass
+    hsv_path = os.path.join(model_path, dataset, "hsv")
+    label_path = os.path.join(model_path, dataset, "label")
+    start_time = timeit.default_timer()
+
+    for img_path, mask_path in zip(img_list, mask_list):
+        # 可視化画像の名前を取得
+        file_name = img_path.split("/")[-1].replace("JPG", "png")
+        patches, _ = DataLoader.crop_img(img_path,)

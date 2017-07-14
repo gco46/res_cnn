@@ -1,5 +1,6 @@
 # coding=utf-8
 from tools import Patch_DataLoader
+import tools as tl
 import numpy as np
 import gc
 import os
@@ -12,18 +13,7 @@ def fcn_generator(in_size, size, step, dataset, batch_size, subsets=3):
     step: int,
     dataset: str, "ips" or "melanoma", "_1" to "_5"
     """
-    img_txt = "train_data" + dataset[-1] + ".txt"
-    mask_txt = "train_mask" + dataset[-1] + ".txt"
-    img_txt = os.path.join("data", dataset[:-2], "dataset", img_txt)
-    mask_txt = os.path.join("data", dataset[:-2], "dataset", mask_txt)
-    img_list = []
-    mask_list = []
-    for line in open(img_txt, "r"):
-        img_list.append(line.strip())
-    for line in open(mask_txt, "r"):
-        mask_list.append(line.strip())
-    img_list.sort()
-    mask_list.sort()
+    img_list, mask_list = tl.load_datapath(dataset)
 
     nb_samples = len(img_list)
     while 1:
