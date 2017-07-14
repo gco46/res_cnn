@@ -3,6 +3,7 @@ from keras.models import model_from_json
 import models
 from tools import Patch_DataLoader
 import tools as tl
+import timeit
 
 
 def test_model(method, dataset, in_size, size, step, resolution,
@@ -40,6 +41,7 @@ def test_model(method, dataset, in_size, size, step, resolution,
     )
 
     print("visualize the result of " + dataset)
+    # 可視化画像を保存するためのディレクトリ作成
     try:
         if isinstance(resolution, list):
             for i in resolution:
@@ -66,9 +68,16 @@ def test_model(method, dataset, in_size, size, step, resolution,
         pass
     hsv_path = os.path.join(model_path, dataset, "hsv")
     label_path = os.path.join(model_path, dataset, "label")
-    start_time = timeit.default_timer()
 
+    start_time = timeit.default_timer()
     for img_path, mask_path in zip(img_list, mask_list):
         # 可視化画像の名前を取得
         file_name = img_path.split("/")[-1].replace("JPG", "png")
-        patches, _ = DataLoader.crop_img(img_path,)
+        # データ読み込み
+        patches, _ = DataLoader.crop_img(img_path, mask_path)
+        height = DataLoader.height
+        width = DataLoader.width
+        patches = patches.reshape(patches.shape[0], in_size, in_size, 3)
+        patches /= 255.
+        # 推定
+        prob = model.predict(patches, batch_size=16)
