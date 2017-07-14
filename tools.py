@@ -4,6 +4,22 @@ import numpy as np
 from PIL import Image
 
 
+def getFilelist(path, ext):
+    """
+    get files path which have specified extension as a list recursiveliy.
+    path: str, directory path you want to search
+    ext: str, extension
+
+    output: list, the components are file path
+    """
+    t = []
+    for root, dirs, files in os.walk(path):
+        for file in files:
+            if file.endswith(ext):
+                t.append(os.path.join(root, file))
+    return t
+
+
 class Patch_DataLoader(object):
     label_d = {'ips': (0, 1, 2, 3), 'melanoma': (0, 1)}
     # ips: good -> 0, bad -> 1, bgd -> 2, others -> 3
