@@ -12,9 +12,30 @@ from keras.layers.merge import Add
 from keras.initializers import Constant
 from keras.regularizers import l2
 from keras.engine.topology import Layer
-from keras.backend as K
+import keras.backend as K
+import tensorflow as tf
 # from keras.layers.normalization import BatchNormalization
 import numpy as np
+
+
+def bilinear_upsample_weights(factor, number_of_classes):
+    if factor == "full":
+        filter_size = 14
+    else:
+        filter_size = factor * 2 - factor % 2
+    factor = (filter_size + 1) // 2
+    if filter_size % 2 == 1:
+        center = factor - 1
+    else:
+        center = factor - 0.5
+    og = np.ogrid[:filter_size, :filter_size]
+    upsample_kernel = (1 - abs(og[0] - center) /
+                       factor) * (1 - abs(og[1] - center) / factor)
+    weights = np.zeros((filter_size, filter_size, number_of_classes, number_of_classes),
+                       dtype=np.float32)
+    for i in range(number_of_classes):
+        weights[:, :, i, i] = upsample_kernel
+    return weights
 
 
 def myVGG_p4(size, l2_reg, method, out_num):
@@ -23,7 +44,7 @@ def myVGG_p4(size, l2_reg, method, out_num):
     elif method == "regression":
         out_act = "linear"
     model = Sequential()
-    model.add(ZeroPadding2D((1, 1), input_shape=(3, size, size)))
+    model.add(ZeroPadding2D((1, 1), input_shape=(size, size, 3)))
     model.add(Conv2D(
         64, (3, 3), activation='relu', kernel_regularizer=l2(l2_reg)))
     model.add(ZeroPadding2D((1, 1)))
@@ -81,7 +102,7 @@ def myVGG_p5(size, l2_reg, method, out_num):
     elif method == "regression":
         out_act = "linear"
     model = Sequential()
-    model.add(ZeroPadding2D((1, 1), input_shape=(3, size, size)))
+    model.add(ZeroPadding2D((1, 1), input_shape=(size, size, 3)))
     model.add(Conv2D(
         64, (3, 3), activation='relu', kernel_regularizer=l2(l2_reg)))
     model.add(ZeroPadding2D((1, 1)))
@@ -302,10 +323,9 @@ def softmax_sparse_crossentropy(y_true, y_pred):
     # 全ピクセルの和を計算する
     # 平均でもいいか...?
     cross_entropy = -K.sum(y_true * log_softmax, axis=1)
-    cross_entropy_sum = K.sum(cross_entropy)
-    # cross_entropy_mean = K.mean(cross_entropy)
+    cross_entropy_mean = K.mean(cross_entropy)
 
-    return cross_entropy_sum
+    return cross_entropy_mean
 
 
 def sparse_accuracy(y_true, y_pred):

@@ -1,10 +1,11 @@
 # coding=utf-8
-import tools as tl
+from tools import Patch_DataLoader
 import numpy as np
 import gc
+import os
 
 
-def fcn_generator(in_size, size, step, dataset):
+def fcn_generator(in_size, size, step, dataset, batch_size, subsets=3):
     """
     in_size: int,
     size: int,
@@ -13,13 +14,13 @@ def fcn_generator(in_size, size, step, dataset):
     """
     img_txt = "train_data" + dataset[-1] + ".txt"
     mask_txt = "train_mask" + dataset[-1] + ".txt"
-    img_txt = os.path.join("data", dataset[:-2], "img", data_txt)
-    mask_txt = os.path.join("data", dataset[:-2], "mask", data_txt)
+    img_txt = os.path.join("data", dataset[:-2], "dataset", img_txt)
+    mask_txt = os.path.join("data", dataset[:-2], "dataset", mask_txt)
     img_list = []
     mask_list = []
     for line in open(img_txt, "r"):
         img_list.append(line.strip())
-    for line in open(mask_list, "r"):
+    for line in open(mask_txt, "r"):
         mask_list.append(line.strip())
     img_list.sort()
     mask_list.sort()
@@ -50,11 +51,11 @@ def fcn_generator(in_size, size, step, dataset):
             X_train, y_train = DataLoader.load_data()
             X_train = X_train.reshape(X_train.shape[0], in_size, in_size, 3)
             X_train /= 255.
-            y_train = y_train.reshape(y_train.shape[0], in_size, in_size)
+            y_train = y_train.reshape(y_train.shape[0], in_size, in_size, 1)
             batch_loop = X_train.shape[0] // batch_size
             for j in range(batch_loop):     # batch loop
                 x = X_train[j * batch_size: (j + 1) * batch_size, :, :, :]
-                y = y_train[j * batch_size: (j + 1) * batch_size, :]
+                y = y_train[j * batch_size: (j + 1) * batch_size, :, :]
                 yield x, y
             del X_train
             del y_train

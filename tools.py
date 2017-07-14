@@ -170,7 +170,7 @@ class Patch_DataLoader(object):
             else:
                 target = np.int64(label)
         else:
-            target = self.patch_resize(m_patch)
+            m_patch = self.patch_resize(m_patch)
             target = m_patch.flatten()
         return target
 

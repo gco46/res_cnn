@@ -1,7 +1,8 @@
 # coding=utf-8
-import tools as tl
-import ptools as ptl
+from tools import Patch_DataLoader
+# import ptools as ptl
 import models
+from generator import fcn_generator
 from models import softmax_sparse_crossentropy, sparse_accuracy
 from keras.utils import np_utils
 from keras.optimizers import SGD, Adam
@@ -51,12 +52,20 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
 
     # ネットワークの出力ユニット数指定
     if method != 'regression':
+        if method == "classification":
+            metrics = "accuracy"
+            loss_f = "categorical_crossentropy"
+        else:
+            metrics = sparse_accuracy
+            loss_f = softmax_sparse_crossentropy
         resolution = None
         out_num = num_classes
     else:
         out_num = 0
         for i in resolution:
             out_num += i**2 * num_classes
+        metrics = "mse"
+        loss_f = "mean_squared_error"
 
     # weights ディレクトリ作成
     try:
@@ -68,44 +77,33 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
     # dataset のパス指定して.txtからファイルパス読み込み
     img_txt = "train_data" + dataset[-1] + ".txt"
     mask_txt = "train_mask" + dataset[-1] + ".txt"
-    img_txt = os.path.join("data", dataset[:-2], "img", data_txt)
-    mask_txt = os.path.join("data", dataset[:-2], "mask", data_txt)
+    img_txt = os.path.join("data", dataset[:-2], "dataset", img_txt)
+    mask_txt = os.path.join("data", dataset[:-2], "dataset", mask_txt)
     img_list = []
     mask_list = []
     for line in open(img_txt, "r"):
         img_list.append(line.strip())
-    for line in open(mask_list, "r"):
+    for line in open(mask_txt, "r"):
         mask_list.append(line.strip())
 
+    # インスタンス化はするが読み込みはあとで行う。
     DataLoader = Patch_DataLoader(
         img_list, mask_list, in_size, size, step, method, resolution
     )
-    X_train, y_train = DataLoader.load_dataset()
-    X_train = X_train.reshape(X_train.shape[0], in_size, in_size, 3)
-    X_train /= 255.
 
-    if method == "classification":
-        y_train = np_utils.to_categorical(y_train, num_classes=3)
-        metrics = "accuracy"
-        loss_f = "categorical_crossentropy"
-    elif method == "regression":
-        metrics = "mse"
-        loss_f = "mean_squared_error"
-    else:
-        metrics = sparse_accuracy
-        loss_f = softmax_sparse_crossentropy
-
+    # モデル読み込み
     if arch == "vgg_p5":
         if method == "fcn":
             model = models.fcn_p5_full(num_classes)
         else:
-            model = models.myVGG_p5(size, l2_reg, method, out_num)
+            model = models.myVGG_p5(in_size, l2_reg, method, out_num)
     else:
-        ValueError("now supported to vgg_p5")
+        ValueError("now support only vgg_p5")
 
+    # optimizer指定、モデルコンパイル
     if opt == "SGD":
         model.compile(loss=loss_f,
-                      optimizer=SGD(lr=lr, momentum=momentum, decay=decay),
+                      optimizer=SGD(lr=lr, momentum=0.9, decay=decay),
                       metrics=[metrics]
                       )
     elif opt == "Adadelta":
@@ -116,19 +114,8 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
                       metrics=[metrics]
                       )
     elif opt == "Adam":
-        if momentum == "default":
-            beta1 = 0.9
-            beta2 = 0.999
-            momentum = (beta1, beta2)
-        elif isinstance(momentum, tuple) and len(momentum) == 2:
-            beta1 = momentum[0]
-            beta2 = momeutum[1]
-        else:
-            raise ValueError(
-                "with Adam, momentum must be 2 length of tuple or 'default'")
         model.compile(loss=loss_f,
-                      optimizer=Adam(
-                          lr=lr, beta_1=beta1, beta_2=beta2, decay=decay),
+                      optimizer=Adam(lr=lr, decay=decay),
                       metrics=[metrics]
                       )
     else:
@@ -136,5 +123,78 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
 
     print("train on " + dataset)
     start_time = timeit.default_timer()
+    if method != "fcn":
+        # fcn以外は.fit()で学習
+        X_train, y_train = DataLoader.load_data()
+        print("data loaded.")
+        X_train = X_train.reshape(X_train.shape[0], in_size, in_size, 3)
+        X_train /= 255.
+        if method == "classification":
+            y_train = np_utils.to_categorical(y_train, num_classes=3)
+        hist = model.fit(X_train, y_train,
+                         batch_size=batch_size,
+                         epochs=epochs,
+                         verbose=1,
+                         )
+    else:
+        # fcnはgeneratorで学習
+        steps_per_epoch = DataLoader.num_samples // batch_size
+        hist = model.fit_generator(
+            generator=fcn_generator(in_size, size, step, dataset, batch_size),
+            steps_per_epoch=steps_per_epoch,
+            epochs=epochs
+        )
 
-    if method == "fcn":
+    elapsed_time = (timeit.default_timer() - start_time) / 60.
+    print("train on %s takes %.2f m" % (dataset, elapsed_time))
+
+    # モデル保存
+    # fcnはなぜかjsonが作れないため例外処理する
+    try:
+        json_string = model.to_json()
+        with open(os.path.join(dir_path, "train_arch.json"), "w") as file:
+            file.write(json_string)
+    except ValueError:
+        print("couldnt save json_file, skipped")
+    finally:
+        model.save_weights(os.path.join(
+            dir_path, "train_weights.h5"), overwrite=True)
+
+    # パラメータなどをresult.txtに保存
+    with open(os.path.join(dir_path, "result.txt"), "w") as file:
+        file.write("in_size, size, step:" + str((in_size, size, step)) + "\n")
+        file.write("lr:" + str(lr) + "\n")
+        file.write("epochs:" + str(epochs) + "\n")
+        file.write("batch_size:" + str(batch_size) + "\n")
+        file.write("l2_reg:" + str(l2_reg) + "\n")
+        file.write("decay:" + str(decay) + "\n")
+        file.write("TrainingTime:%.2f m\n" % elapsed_time)
+
+    # train loss だけプロットして保存
+    loss = hist.history["loss"]
+    nb_epoch = len(loss)
+    plt.figure()
+    plt.plot(range(nb_epoch), loss, label="loss")
+    plt.legend(loc='best', fontsize=10)
+    plt.grid()
+    plt.xlabel("epoch")
+    plt.ylabel("loss")
+    plt.savefig(os.path.join(dir_path, "loss.png"))
+    plt.close()
+
+if __name__ == '__main__':
+    train_model(
+        method="fcn",
+        resolution=[1],
+        dataset="ips_1",
+        in_size=224,
+        size=150,
+        step=450,
+        arch="vgg_p5",
+        opt="Adam",
+        lr=1e-4,
+        epochs=15,
+        batch_size=16,
+        l2_reg=0,
+        decay=0
+    )
