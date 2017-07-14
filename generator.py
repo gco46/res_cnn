@@ -4,6 +4,7 @@ import tools as tl
 import numpy as np
 import gc
 import os
+# this is test
 
 
 def fcn_generator(in_size, size, step, dataset, batch_size, subsets=3):
