@@ -30,7 +30,7 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
     size: int, cropped patch size
     step: int, patch sampling step
     arch: str, network architecture
-          if method is 'fcn', arch must be 'fcn_p5_full'
+          if method is 'fcn', arch must be 'vgg_p5'
     opt: str, optimizer 'SGD' or 'Adam'
     lr: float, learning rate
     epochs: int, number of epochs to train
@@ -173,6 +173,7 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
     plt.ylabel("loss")
     plt.savefig(os.path.join(dir_path, "loss.png"))
     plt.close()
+
 
 if __name__ == '__main__':
     train_model(
