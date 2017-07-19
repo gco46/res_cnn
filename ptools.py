@@ -1,5 +1,6 @@
 # coding=utf-8
 import numpy as np
+from scipy.misc import imresize
 
 
 class ProbMapConstructer(object):
@@ -13,7 +14,7 @@ class ProbMapConstructer(object):
                    classification -> num_classes
                    regression -> \sum res_int**2 * num_classes
                    if fcn, (nub_samples, in_size, in_size, num_classes)
-        size: int,
+        size: int, cropped size
         step: int,
         origin_h: int, height of original image
         origin_w: int, width of original image
@@ -31,7 +32,51 @@ class ProbMapConstructer(object):
         else:
             self.num_classes = 2
 
-    def construct_maps(self, prob):
+    def construct_InferenceMap(self, maps):
+        """
+        construct inference probabirity maps, for test images.
+        maps: array or list of array,
+
+        output: list of arrays
+        """
+        if isinstance(maps, list):
+            pass
+            # construct by each resolution -----------
+        else:
+            pass
+            # construct inference map --------------
+
+    def construct_oneInferenceMap(self, map_array):
+        """
+        construct inference probabirity map
+        this method is part of 'construct_InferenceMap'
+        this method is also used for single resolution
+        map_array: array, array of patch map
+                    the shape is (num_samples, size, size, num_classes)
+        """
+        output = np.zeros((self.h, self.w, map_array.shape[-1]))
+        counter = np.zeros((self.h, self.w))
+        count_filter = np.ones((self.size, self.size))
+        # フィルタを動かす範囲の計算
+        # wがx軸(横方向), hがy軸(縦方向)
+        w_axis = (self.w - self.size) // self.step + 1
+        h_axis = (self.w - self.size) // self.step + 1
+        p_num = 0
+        for i in range(h_axis):
+            for j in range(w_axis):
+                output[i * step:i * step + size, j * step:j *
+                       step + size, :] += map_array[p_num, :, :, :]
+                counter[i * step:i * step + size, j *
+                        step:j * step + size] += count_filter[:, :]
+                p_num += 1
+        # counterで平均を取る
+        # 0除算対策のため0の場所に1を代入する
+        counter[counter == 0] = 1
+        for n in range(prob.shape[-1]):
+            output[:, :, n] /= counter[:, :]
+        return output
+
+    def construct_patchMaps(self, prob):
         """
         normalize probabirity, and make patch probabirity map.
         output: array, patch prob map, (num_samples, )
@@ -58,14 +103,16 @@ class ProbMapConstructer(object):
             prob = prob.reshape(
                 num_samples, out_size, out_size, self.num_classes
             )
-            # resize to cropped size ----------
-            return None
+            prob = self.normalize_prob(prob)
+            prob_map = self.resampling_map(prob)
+            return prob_map
         elif flag == "regression":
             prob = prob.reshape(num_samples, num_local * self.num_classes)
-            # restore each res------------------
+            prob_map = self.restore_Map_allRes(prob)
+            return prob_map
         else:
-            pass
-            # restore ------------------
+            prob_map = self.restore_patchMap(prob)
+            return prob_map
 
     def normalize_prob(self, reshaped_prob):
         """
@@ -91,12 +138,37 @@ class ProbMapConstructer(object):
         norm_prob = reshaped_prob / sum_axis
         return norm_prob
 
-    def restore_Map_eatchRes(self, prob):
+    def resampling_map(self, prob_map):
+        """
+        resize the output of cnn, to crop size
+        prob_map: array, the shape is
+                         (nb_samples, output_size, output_size, num_classes)
+                    !! prob maps must be normalized !!
+
+        output: array, the shape is (nb_sample, self.size, self.size, 3)
+        """
+        result = []
+        for n in range(prob_map.shape[0]):
+            # サンプルごとにリサイズ
+            # channelごとにリサイズして繋げる
+            one_prob = np.zeros((self.size, self.size, self.num_classes))
+            for c in range(self.num_classes):
+                im = imresize(
+                    prob_map[n, :, :, c], (self.size, self.size)
+                )
+                patch_sample[:, :, c] = im[:, :]
+            # imresizeの戻り値は0-255のため、正規化
+            result.append(one_prob / 255.)
+        result = np.stack(result, axis=0)
+        return result
+
+    def restore_Map_allRes(self, prob):
         """
         calcurate Map for each Res.
         prob: matrix array, (num_samples, num_dims)
-        output: list, list of patchMaps
-                if len(res) == 1,
+        output: list or array,
+                list of patchMaps, each comp is (samples, size, size, 3)
+                In single resolution case, return one array.
         """
         output = []
         # skip でtmp_probを得るためのインデックスを調整
@@ -108,11 +180,15 @@ class ProbMapConstructer(object):
             # resolution一つずつtmp_prob に分割してpatchMapを得る
             tmp_prob = prob[:, skip:(res_int**2 * self.num_classes) + skip]
             output.append(self.restore_patchMap(tmp_prob))
-        return
+        if len(output) == 1:
+            output = output[0]
+        return output
 
     def restore_patchMap(self, prob):
         """
         restore patch map from probabirity.
+        this method is part of 'restore_patchMap'
+        this method is also used for 'classification' prob map.
         prob: matrix array, (num_samples, num_dims)
 
         output: array, (num_samples, size, size, num_classes)
