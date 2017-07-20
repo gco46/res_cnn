@@ -21,7 +21,9 @@ def load_datapath(dataset):
         img_list.append(line.strip())
     for line in open(mask_txt, "r"):
         mask_list.append(line.strip())
-    return img_list.sort(), mask_list.sort()
+    img_list.sort()
+    mask_list.sort()
+    return img_list, mask_list
 
 
 def getFilelist(path, ext):
@@ -116,7 +118,7 @@ class Patch_DataLoader(object):
         y = np.asarray(y)
         return X, y
 
-    def crop_img(self, img_path, mask_path):
+    def crop_img(self, img_path, mask_path, to_array=False):
         """
         crop patches from original images and masks
         img_path: str, path to image
@@ -125,6 +127,8 @@ class Patch_DataLoader(object):
         output: (list, list), first one is list of patch vectors
                               second is target vectors
                 if mask_path is None, output is (list, None)
+        In case of to_array = True,
+        output: (array, array), np.asarray method is used.
         """
         # 可読性のためsize, stepはローカル変数にしておく
         size = self.size
@@ -163,7 +167,10 @@ class Patch_DataLoader(object):
                         patch = self.patch_resize(patch)
                     img_vecs.append(patch.flatten())
                     target_list.append(target)
-        return img_vecs, target_list
+        if to_array:
+            return np.asarray(img_vecs), np.asarray(target_list)
+        else:
+            return img_vecs, target_list
 
     def image2label(self, mask):
         """
@@ -181,7 +188,7 @@ class Patch_DataLoader(object):
             # good -> 0, bad -> 1, bgd -> 2, others -> 3　とする
             img_label = mask_bin[:, :, 0] * 1 + \
                 mask_bin[:, :, 1] * 2 + mask_bin[:, :, 2] * 3
-            # よくわからないラベルを全てothers へ
+            # よくわからないラベルを全てothers へ screening
             img_label[img_label == 0] = 4
             img_label[img_label > 3] = 4
             img_label = img_label - 1
@@ -250,7 +257,8 @@ class Patch_DataLoader(object):
         m_patch: matrix array,
         output: vector array or None(ips), target histograms
                 the length is \sum (res_int**2 * num_classes)
-                in ips dataset, discard patches which is almost filled by 'others'
+                in ips dataset, discard patches which is almost filled by
+                'others'
         """
         result = []
         hist = self.class_label_hist(m_patch)

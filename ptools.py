@@ -1,6 +1,9 @@
 # coding=utf-8
 import numpy as np
+import colorsys
 from scipy.misc import imresize
+import os
+from PIL import Image
 
 
 class ProbMapConstructer(object):
@@ -31,36 +34,120 @@ class ProbMapConstructer(object):
             self.num_classes = 3
         else:
             self.num_classes = 2
+        self.InfMap = self.construct_InferenceMap(model_out)
 
-    def construct_InferenceMap(self, maps):
+    def save_InfMap(self, model_path, img_name):
+        """
+        save inference map as image.
+        model_path: str, path to model directory
+        img_name: str, the image file name !! including extension !!
+                       like 'E3230652.png' or 'ISIC_0000000.png', etc.
+        """
+        if isinstance(self.InfMap, list):
+            for infmap, res_int in zip(self.InfMap, self.res):
+                vis_img, label_img = self.get_InfImg(infmap)
+                vis_img = Image.fromarray(np.uint8(vis_img))
+                label_img = Image.fromarray(np.uint8(label_img))
+                vis_img.save(
+                    os.path.join(model_path, "vis" + str(res_int), img_name)
+                )
+                label_img.save(
+                    os.path.join(model_path, "label" + str(res_int), img_name)
+                )
+        else:
+            vis_img, label_img = self.get_InfImg(self.InfMap)
+            vis_img = Image.fromarray(np.uint8(vis_img))
+            label_img = Image.fromarray(np.uint8(label_img))
+            vis_img.save(
+                os.path.join(model_path, "vis", img_name)
+            )
+            label_img.save(
+                os.path.join(model_path, "label", img_name)
+            )
+
+    def get_InfImg(self, infmap):
+        """
+        output: (array, array), visualized map and label image.
+        """
+        if self.num_classes == 3:
+            # 未推定部分は0(黒)で表示するためのmaskを作成
+            summation = np.sum(infmap, axis=2)
+            tmp = (summation > 0.2) * 1
+            mask = np.zeros(infmap.shape)
+            for i in range(infmap.shape[-1]):
+                mask[:, :, i] = tmp[:, :]
+            # ips dataset
+            # hsv値を確率から求める
+            # vは1.で固定
+            # 確率の最大値はそのままsaturationにする
+            # argmaxによってhをr,g,bに割り当てる
+            # 0(good)は赤、1(bad)は緑、2(bgd)は青で表示
+            h = np.argmax(infmap, axis=2).astype(float)
+            h[h == 0] = 0.
+            h[h == 1] = 1. / 3.
+            h[h == 2] = 2. / 3.
+            s = np.max(infmap, axis=2).astype(float)
+            v = np.ones((infmap.shape[0], infmap.shape[1]))
+            # colosysの関数を、ベクトル演算できるように再定義
+            hsv_to_rgb = np.vectorize(colorsys.hsv_to_rgb)
+            vis_img = hsv_to_rgb(h, s, v)
+            vis_img = np.asarray(vis_img).transpose(1, 2, 0) * 255.0
+            vis_img = vis_img * mask
+
+            # label_img 作成
+            mask = (summation > 0.2) * 1
+            label_img = np.argmax(infmap, axis=2) + 1
+            label_img = label_img * mask
+
+        else:
+            # melanoma dataset
+            # vis_imgとlabel_imgまとめて作成
+            # label_img は
+            # background -> 1, tumor -> 2　それ以外 -> 0となる
+            summation = np.sum(infmap, axis=2)
+            mask = (summation > 0.2) * 1
+            vis_img = np.argmax(infmap, axis=2)
+            label_img = vis_img + 1
+            vis_img[vis_img == 1] = 255
+            vis_img = vis_img * mask
+            label_img = label_img * mask
+        return vis_img, label_img
+
+    def construct_InferenceMap(self, model_out):
         """
         construct inference probabirity maps, for test images.
-        maps: array or list of array,
+        model_out: array, the output of model
 
-        output: list of arrays
+        output: an array or list of arrays,
+                the components are inference maps of original images
         """
+        maps = self.construct_patchMaps(model_out)
         if isinstance(maps, list):
-            pass
-            # construct by each resolution -----------
+            result = []
+            for m in maps:
+                result.append(self.construct_oneInferenceMap(m))
         else:
-            pass
-            # construct inference map --------------
+            result = self.construct_oneInferenceMap(maps)
+        return result
 
     def construct_oneInferenceMap(self, map_array):
         """
         construct inference probabirity map
         this method is part of 'construct_InferenceMap'
-        this method is also used for single resolution
         map_array: array, array of patch map
                     the shape is (num_samples, size, size, num_classes)
+        output: array, inference map, (origin_h, origin_w, num_classes)
         """
+        # 可読性のためローカル変数に代入
+        size = self.size
+        step = self.step
         output = np.zeros((self.h, self.w, map_array.shape[-1]))
         counter = np.zeros((self.h, self.w))
-        count_filter = np.ones((self.size, self.size))
+        count_filter = np.ones((size, size))
         # フィルタを動かす範囲の計算
         # wがx軸(横方向), hがy軸(縦方向)
-        w_axis = (self.w - self.size) // self.step + 1
-        h_axis = (self.w - self.size) // self.step + 1
+        w_axis = (self.w - size) // step + 1
+        h_axis = (self.h - size) // step + 1
         p_num = 0
         for i in range(h_axis):
             for j in range(w_axis):
@@ -72,13 +159,14 @@ class ProbMapConstructer(object):
         # counterで平均を取る
         # 0除算対策のため0の場所に1を代入する
         counter[counter == 0] = 1
-        for n in range(prob.shape[-1]):
+        for n in range(map_array.shape[-1]):
             output[:, :, n] /= counter[:, :]
         return output
 
     def construct_patchMaps(self, prob):
         """
         normalize probabirity, and make patch probabirity map.
+        prob: array, the output  of model
         output: array, patch prob map, (num_samples, )
         """
         # (?, num_classes)に変換

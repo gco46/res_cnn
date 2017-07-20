@@ -70,10 +70,11 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
 
     # weights ディレクトリ作成
     try:
-        os.makedirs(os.path.join("weights/valid_all", dataset))
+        n = dataset[-1]
+        os.makedirs("weights/valid_all/dataset_" + str(n))
     except FileExistsError:
         pass
-    dir_path = os.path.join("weights/valid_all", dataset)
+    dir_path = os.path.join("weights/valid_all/dataset_" + str(n))
 
     # データのパス読み込み
     img_list, mask_list = tl.load_datapath(dataset)
@@ -122,7 +123,7 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
         X_train = X_train.reshape(X_train.shape[0], in_size, in_size, 3)
         X_train /= 255.
         if method == "classification":
-            y_train = np_utils.to_categorical(y_train, num_classes=3)
+            y_train = np_utils.to_categorical(y_train, num_classes=num_classes)
         hist = model.fit(X_train, y_train,
                          batch_size=batch_size,
                          epochs=epochs,
@@ -177,16 +178,16 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
 
 if __name__ == '__main__':
     train_model(
-        method="fcn",
-        resolution=[1],
-        dataset="ips_1",
-        in_size=224,
+        method="classification",
+        resolution=[1, 2, 3],
+        dataset="melanoma_1",
+        in_size=100,
         size=150,
-        step=450,
+        step=500,
         arch="vgg_p5",
         opt="Adam",
         lr=1e-4,
-        epochs=15,
+        epochs=1,
         batch_size=16,
         l2_reg=0,
         decay=0
