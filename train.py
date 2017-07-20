@@ -178,12 +178,12 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
 
 if __name__ == '__main__':
     train_model(
-        method="classification",
+        method="fcn",
         resolution=[1, 2, 3],
-        dataset="melanoma_1",
-        in_size=100,
-        size=150,
-        step=500,
+        dataset="ips_1",
+        in_size=224,
+        size=300,
+        step=450,
         arch="vgg_p5",
         opt="Adam",
         lr=1e-4,

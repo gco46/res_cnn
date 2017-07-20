@@ -1,9 +1,8 @@
 # coding=utf-8
 from keras.models import model_from_json
 import models
-from tools import Patch_DataLoader
+from tools import Patch_DataLoader, ProbMapConstructer
 import tools as tl
-from ptools import ProbMapConstructer
 import timeit
 import os
 
