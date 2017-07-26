@@ -71,7 +71,9 @@ def test_model(method, resolution, dataset, in_size, size, step,
     start_time = timeit.default_timer()
     for img_path, mask_path in zip(img_list, mask_list):
         # 可視化画像の名前を取得
-        file_name = img_path.split("/")[-1].replace("JPG", "png")
+        file_name = img_path.split("/")[-1]
+        file_name, ext = os.path.splitext(file_name)
+        file_name = file_name + ".png"
         # データ読み込み
         patches, _ = DataLoader.crop_img(img_path, mask_path, to_array=True)
         height = DataLoader.height
