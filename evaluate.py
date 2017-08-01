@@ -1,5 +1,6 @@
 # coding=utf-8
 import tools as tl
+from tools import Patch_DataLoader
 import os
 import numpy as np
 from PIL import Image
@@ -108,6 +109,15 @@ def evaluate_one_fold(directory, dataset, w_path):
     tpr = []
     tnr = []
     acc = []
+
+    # インスタンス化するために適当なパスを読み込み
+    if "ips" in path:
+        img_list, mask_list = tl.load_datapath("ips_1")
+        labels = [1, 2, 3]
+    else:
+        img_list, mask_list = tl.load_datapath("melanoma_1")
+        labels = [1, 2]
+    DL = Patch_DataLoader(img_list, mask_list)
     for pred, true in zip(pred_path, true_path):
         pred_name, _ = os.path.splitext(pred)
         true_name, _ = os.path.splitext(true)
@@ -115,15 +125,12 @@ def evaluate_one_fold(directory, dataset, w_path):
 
         y_pred = np.array(Image.open(pred), int)
         y_true = np.array(Image.open(true), int)
-        y_true = tl.image2label(y_true)
+        y_true = DL.image2label(y_true, evaluate=True)
 
-        #  others の場所を除く。
-        y_true[y_true >= 4] = 0
-        y_true = modify(y_true)
-        # out of region for evaluation
+        # out of region of evaluation
         oor = ~(y_true == 0) * 1
         y_pred = y_pred * oor
-        j, d, tp, tn, a = evaluate_one_image(y_true, y_pred)
+        j, d, tp, tn, a = evaluate_one_image(y_true, y_pred, labels)
         jaccard.append(j)
         dice.append(d)
         tpr.append(tp)
@@ -135,3 +142,48 @@ def evaluate_one_fold(directory, dataset, w_path):
     tnr = sum(tnr) / len(tnr)
     acc = sum(acc) / len(acc)
     return jaccard, dice, tpr, tnr, acc
+
+
+def evaluate_one_image(y_true, y_pred, labels):
+    """
+    evaluate segmentation result, using confusion_matrix
+    y_true: 2d array,
+    y_pred: 2d array,
+    labels: the labels dataset contains,
+            ips -> [1, 2, 3], melanoma -> [1, 2]
+    oor is ignored.
+    """
+    y_true = y_true.flatten()
+    y_pred = y_pred.flatten()
+    mat = confusion_matrix(y_true, y_pred, labels=labels)
+    jaccard = []
+    dice = []
+    tpr = []
+    tnr = []
+    acc = []
+    for i in range(mat.shape[0]):
+        if mat[i, :].sum() == 0:
+            continue
+        tp = mat[i, i]
+        tn = mat.sum() - (mat[i, :].sum() + mat[:, i].sum() - mat[i, i])
+        fp = mat[:, i].sum() - mat[i, i]
+        fn = mat[i, :].sum() - mat[i, i]
+        if mat.shape[0] == 2 and i == 1:
+            jaccard.append(tp / float(tp + fp + fn))
+            dice.append(2 * tp / float(2 * tp + fp + fn))
+            tpr.append(tp / float(tp + fn))
+            tnr.append(tn / float(fp + tn))
+            acc.append((tp + tn) / float(tp + tn + fp + fn))
+
+    jaccard = sum(jaccard) / len(jaccard)
+    dice = sum(dice) / len(dice)
+    tpr = sum(tpr) / len(tpr)
+    tnr = sum(tnr) / len(tnr)
+    acc = sum(acc) / len(acc)
+    return jaccard, dice, tpr, tnr, acc
+
+
+if __name__ == '__main__':
+    model = sys.argv[1]
+    data = sys.argv[2]
+    evaluate_model(model, data)

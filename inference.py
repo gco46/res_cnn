@@ -92,15 +92,14 @@ def test_model(method, resolution, dataset, in_size, size, step,
             resolution=resolution
         )
         MapConst.save_InfMap(model_path, file_name)
-        raise ValueError
 
 
 if __name__ == '__main__':
     test_model(
         method="classification",
-        resolution=[1, 2, 3],
-        dataset="melanoma_1",
-        in_size=100,
-        size=150,
-        step=35
+        resolution=None,
+        dataset="ips_1",
+        in_size=150,
+        size=300,
+        step=45
     )

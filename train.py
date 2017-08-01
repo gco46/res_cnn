@@ -90,6 +90,11 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
             model = models.fcn_p5_full(num_classes)
         else:
             model = models.myVGG_p5(in_size, l2_reg, method, out_num)
+    elif arch == "vgg_p4":
+        if method == "fcn":
+            raise ValueError("fcn has only vgg_p5 models")
+        else:
+            model = models.myVGG_p4(in_size, l2_reg, method, out_num)
     else:
         ValueError("now support only vgg_p5")
 
@@ -155,7 +160,11 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
 
     # パラメータなどをresult.txtに保存
     with open(os.path.join(dir_path, "result.txt"), "w") as file:
+        title = ["<<", method, arch, ">>"]
+        title = " ".join(title)
+        file.write(title + "\n")
         file.write("in_size, size, step:" + str((in_size, size, step)) + "\n")
+        file.write("resolution:" + str(resolution) + "\n")
         file.write("lr:" + str(lr) + "\n")
         file.write("epochs:" + str(epochs) + "\n")
         file.write("batch_size:" + str(batch_size) + "\n")
@@ -178,16 +187,16 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
 
 if __name__ == '__main__':
     train_model(
-        method="fcn",
-        resolution=[1, 2, 3],
-        dataset="ips_1",
-        in_size=224,
+        method="regression",
+        resolution=[1, 2, 5],
+        dataset="melanoma_1",
+        in_size=100,
         size=300,
-        step=450,
-        arch="vgg_p5",
+        step=300,
+        arch="vgg_p4",
         opt="Adam",
         lr=1e-4,
-        epochs=1,
+        epochs=2,
         batch_size=16,
         l2_reg=0,
         decay=0

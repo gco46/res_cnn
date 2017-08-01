@@ -46,17 +46,22 @@ def getFilelist(path, ext):
 
 class Patch_DataLoader(object):
     label_d = {'ips': (0, 1, 2, 3), 'melanoma': (0, 1)}
+    # in train phase
     # ips: good -> 0, bad -> 1, bgd -> 2, others -> 3
     # melanoma: background -> 0, tumor -> 1
+    # in evaluate
+    # ips: good -> 1, bad -> 2, bgd -> 3, others(oor) -> 0
+    # melanoma: background -> 1, tumor -> 2
+    # oor is out of region of evaluation
 
     def __init__(self,
                  img_list,
                  mask_list,
-                 in_size,
-                 size,
-                 step,
-                 method,
-                 resolution,
+                 in_size=0,
+                 size=0,
+                 step=0,
+                 method=None,
+                 resolution=None,
                  threshold=0.8):
         """
         img_list: list, image path list, path is str
@@ -85,7 +90,8 @@ class Patch_DataLoader(object):
         else:
             self.datatype = 'melanoma'
             self.num_classes = 2
-        self.num_samples = self.count_samples()
+        if self.in_size != 0:
+            self.num_samples = self.count_samples()
 
     def count_samples(self):
         """
@@ -174,12 +180,22 @@ class Patch_DataLoader(object):
         else:
             return img_vecs, target_list
 
-    def image2label(self, mask):
+    def image2label(self, mask, evaluate=False):
         """
         convert mask image(.png) to label
         mask: array, mask image
              in ips data, mask shape is (row, column, channels)
              in melanoma, (row, column)
+
+        in default, ips dataset,
+        good -> 0, bad -> 1, bgd -> 3, others -> 4
+        in melanoma dataset,
+        background -> 0, tumor -> 1
+
+        if evaluate = True, in ips, 'others' label is set to 0,
+        and screening less than 100 pixel to 0
+        good -> 1, bad -> 2, bgd -> 3, others -> 0
+        in melanoma, background -> 1, tumor -> 2
 
         output: matrix array, shape is (row, column), 2 dims
         """
@@ -193,10 +209,23 @@ class Patch_DataLoader(object):
             # よくわからないラベルを全てothers へ screening
             img_label[img_label == 0] = 4
             img_label[img_label > 3] = 4
-            img_label = img_label - 1
+            if evaluate:
+                img_label[img_label == 4] = 0
+                good = (y_true == 1).sum()
+                bad = (y_true == 2).sum()
+                bgd = (y_true == 3).sum()
+                hist = np.array([good, bad, bgd])
+                if np.min(hist) < 100:
+                    label = np.argmin(hist) + 1
+                    y_true[y_true == label] = 0
+            else:
+                img_label = img_label - 1
         else:
             # melanoma dataset
-            img_label = mask_bin
+            if evaluate:
+                img_label = mask_bin + 1
+            else:
+                img_label = mask_bin
         return img_label
 
     def calcTarget(self, m_patch):
@@ -413,6 +442,8 @@ class ProbMapConstructer(object):
 
             # label_img 作成
             mask = (summation > 0.2) * 1
+            # label_imgは
+            # good -> 1, bad -> 2, bgd -> 3, oor -> 0となる
             label_img = np.argmax(infmap, axis=2) + 1
             label_img = label_img * mask
 
