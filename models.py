@@ -14,8 +14,10 @@ from keras.regularizers import l2
 from keras.engine.topology import Layer
 import keras.backend as K
 import tensorflow as tf
-# from keras.layers.normalization import BatchNormalization
 import numpy as np
+from keras.utils import conv_utils
+from keras.engine.topology import Layer
+from keras.engine import InputSpec
 
 
 def bilinear_upsample_weights(factor, number_of_classes):
@@ -300,7 +302,7 @@ def fcn_p5_image(classes):
 
     return: keras Model object
     """
-    inputs = Input(shape=(1200, 1600, 3))
+    inputs = Input(shape=(None, None, 3))
     x = Conv2D(filters=64,
                kernel_size=(3, 3),
                padding='same',
@@ -397,6 +399,8 @@ def fcn_p5_image(classes):
                 activation="relu")(p4)
 
     # merge p4 and p5
+    p5 = ZeroPadding2D(padding=(10, 10))(p5)
+    p5 = CroppingLike2D(K.int_shape(p4))(p5)
     p45 = Add()([p4, p5])
 
     # p4+p5 を x2 upsampling
@@ -408,6 +412,8 @@ def fcn_p5_image(classes):
                           kernel_initializer=Constant(bilinear_upsample_weights(2, classes)))(p45)
 
     # p3とp45をmerge
+    p45 = ZeroPadding2D(padding=(1, 1))(p45)
+    p45 = CroppingLike2D(K.int_shape(p3))(p45)
     p345 = Add()([p3, p45])
 
     # p3+p4+p5を x8 upsampling
@@ -418,8 +424,102 @@ def fcn_p5_image(classes):
                         activation="linear",
                         kernel_initializer=Constant(bilinear_upsample_weights(8, classes)))(p345)
 
+    x = ZeroPadding2D(padding=(1, 1))(x)
+    x = CroppingLike2D(K.int_shape(inputs))(x)
     model = Model(inputs=inputs, outputs=x)
     return model
+
+
+class CroppingLike2D(Layer):
+
+    def __init__(self, target_shape, offset=None, data_format=None,
+                 **kwargs):
+        """Crop to target.
+        If only one `offset` is set, then all dimensions are offset by this amount.
+        """
+        super(CroppingLike2D, self).__init__(**kwargs)
+        self.data_format = conv_utils.normalize_data_format(data_format)
+        self.target_shape = target_shape
+        if offset is None or offset == 'centered':
+            self.offset = 'centered'
+        elif isinstance(offset, int):
+            self.offset = (offset, offset)
+        elif hasattr(offset, '__len__'):
+            if len(offset) != 2:
+                raise ValueError('`offset` should have two elements. '
+                                 'Found: ' + str(offset))
+            self.offset = offset
+        self.input_spec = InputSpec(ndim=4)
+
+    def compute_output_shape(self, input_shape):
+        if self.data_format == 'channels_first':
+            return (input_shape[0],
+                    input_shape[1],
+                    self.target_shape[2],
+                    self.target_shape[3])
+        else:
+            return (input_shape[0],
+                    self.target_shape[1],
+                    self.target_shape[2],
+                    input_shape[3])
+
+    def call(self, inputs):
+        input_shape = K.int_shape(inputs)
+        if self.data_format == 'channels_first':
+            input_height = input_shape[2]
+            input_width = input_shape[3]
+            target_height = self.target_shape[2]
+            target_width = self.target_shape[3]
+            if target_height > input_height or target_width > input_width:
+                raise ValueError('The Tensor to be cropped need to be smaller'
+                                 'or equal to the target Tensor.')
+
+            if self.offset == 'centered':
+                self.offset = [int((input_height - target_height) / 2),
+                               int((input_width - target_width) / 2)]
+
+            if self.offset[0] + target_height > input_height:
+                raise ValueError('Height index out of range: '
+                                 + str(self.offset[0] + target_height))
+            if self.offset[1] + target_width > input_width:
+                raise ValueError('Width index out of range:'
+                                 + str(self.offset[1] + target_width))
+
+            return inputs[:,
+                          :,
+                          self.offset[0]:self.offset[0] + target_height,
+                          self.offset[1]:self.offset[1] + target_width]
+        elif self.data_format == 'channels_last':
+            input_height = input_shape[1]
+            input_width = input_shape[2]
+            target_height = self.target_shape[1]
+            target_width = self.target_shape[2]
+            if target_height > input_height or target_width > input_width:
+                raise ValueError('The Tensor to be cropped need to be smaller'
+                                 'or equal to the target Tensor.')
+
+            if self.offset == 'centered':
+                self.offset = [int((input_height - target_height) / 2),
+                               int((input_width - target_width) / 2)]
+
+            if self.offset[0] + target_height > input_height:
+                raise ValueError('Height index out of range: '
+                                 + str(self.offset[0] + target_height))
+            if self.offset[1] + target_width > input_width:
+                raise ValueError('Width index out of range:'
+                                 + str(self.offset[1] + target_width))
+            output = inputs[:,
+                            self.offset[0]:self.offset[0] + target_height,
+                            self.offset[1]:self.offset[1] + target_width,
+                            :]
+            return output
+
+    def get_config(self):
+        config = {'target_shape': self.target_shape,
+                  'offset': self.offset,
+                  'data_format': self.data_format}
+        base_config = super(CroppingLike2D, self).get_config()
+        return dict(list(base_config.items()) + list(config.items()))
 
 
 def softmax_sparse_crossentropy(y_true, y_pred):
