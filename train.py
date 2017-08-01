@@ -185,6 +185,27 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
     plt.close()
 
 
+def train_fcn_model(dataset, opt, lr, batch_size):
+    """
+    train fcn with whole image.
+    dataset: str, "ips" or "melanoma" + 1 - 5
+    opt: str,
+    lr: float, learning rate
+    batch_size: int,
+    """
+    img_list, mask_list = tl.load_datapath(dataset)
+    DL = Patch_DataLoader(img_list, mask_list)
+    X_train = []
+    y_train = []
+    for im, ma in zip(img_list, mask_list):
+        img = np.array(Image.open(im), dtype=np.float32)
+        mask = np.array(Image.open(im), dtype=int)
+        mask = DL.image2label(mask)
+        X_train.append(img)
+        y_train.append(mask)
+    return X_train, y_train
+
+
 if __name__ == '__main__':
     train_model(
         method="regression",

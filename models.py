@@ -293,6 +293,135 @@ def fcn_p5_full(classes):
     return model
 
 
+def fcn_p5_image(classes):
+    """
+    VGG16 based FCN model,
+    classes: int, number of classes
+
+    return: keras Model object
+    """
+    inputs = Input(shape=(None, None, 3))
+    x = Conv2D(filters=64,
+               kernel_size=(3, 3),
+               padding='same',
+               activation='relu')(inputs)
+    x = Conv2D(filters=64,
+               kernel_size=(3, 3),
+               padding='same',
+               activation='relu')(x)
+    x = MaxPooling2D()(x)
+
+    x = Conv2D(filters=128,
+               kernel_size=(3, 3),
+               padding="same",
+               activation='relu')(x)
+    x = Conv2D(filters=128,
+               kernel_size=(3, 3),
+               padding="same",
+               activation='relu')(x)
+    x = MaxPooling2D()(x)
+
+    x = Conv2D(filters=256,
+               kernel_size=(3, 3),
+               padding="same",
+               activation='relu')(x)
+    x = Conv2D(filters=256,
+               kernel_size=(3, 3),
+               padding="same",
+               activation='relu')(x)
+    x = Conv2D(filters=256,
+               kernel_size=(3, 3),
+               padding="same",
+               activation='relu')(x)
+    x = MaxPooling2D()(x)
+
+    # pool3のfeature mapを取得
+    p3 = x
+
+    x = Conv2D(filters=512,
+               kernel_size=(3, 3),
+               padding="same",
+               activation='relu')(x)
+    x = Conv2D(filters=512,
+               kernel_size=(3, 3),
+               padding="same",
+               activation='relu')(x)
+    x = Conv2D(filters=512,
+               kernel_size=(3, 3),
+               padding="same",
+               activation='relu')(x)
+    x = MaxPooling2D()(x)
+
+    # pool4のfeature mapを取得
+    p4 = x
+
+    x = Conv2D(filters=512,
+               kernel_size=(3, 3),
+               padding="same",
+               activation='relu')(x)
+    x = Conv2D(filters=512,
+               kernel_size=(3, 3),
+               padding="same",
+               activation='relu')(x)
+    x = Conv2D(filters=512,
+               kernel_size=(3, 3),
+               padding="same",
+               activation='relu')(x)
+    x = MaxPooling2D()(x)
+
+    x = Conv2D(filters=4096,
+               kernel_size=(7, 7),
+               padding="valid",
+               activation="relu")(x)
+    x = Dropout(0.5)(x)
+    x = Conv2D(filters=4096,
+               kernel_size=(1, 1),
+               padding="valid",
+               activation="relu")(x)
+    x = Dropout(0.5)(x)
+
+    p5 = Conv2DTranspose(filters=classes,
+                         kernel_size=(14, 14),
+                         strides=(1, 1),
+                         padding="valid",
+                         activation="linear",
+                         kernel_initializer=Constant(bilinear_upsample_weights("full", classes)))(x)
+
+    # pool3 のfeature mapを次元圧縮
+    p3 = Conv2D(filters=classes,
+                kernel_size=(1, 1),
+                activation='relu')(p3)
+    # pool4のfeature mapを次元圧縮
+    p4 = Conv2D(filters=classes,
+                kernel_size=(1, 1),
+                activation="relu")(p4)
+
+    # merge p4 and p5
+    p45 = Add()([p4, p5])
+
+    # p4+p5 を x2 upsampling
+    p45 = Conv2DTranspose(filters=classes,
+                          kernel_size=(4, 4),
+                          strides=(2, 2),
+                          padding="same",
+                          activation="linear",
+                          kernel_initializer=Constant(bilinear_upsample_weights(2, classes)))(p45)
+
+    # p3とp45をmerge
+    p345 = Add()([p3, p45])
+
+    # p3+p4+p5を x8 upsampling
+    x = Conv2DTranspose(filters=classes,
+                        kernel_size=(16, 16),
+                        strides=(8, 8),
+                        padding="same",
+                        activation="linear",
+                        kernel_initializer=Constant(bilinear_upsample_weights(8, classes)))(p345)
+
+    model = Model(inputs=inputs, outputs=x)
+    return model
+
+
 def softmax_sparse_crossentropy(y_true, y_pred):
     """
     define loss function, categorical_crossentropy for fcn.
