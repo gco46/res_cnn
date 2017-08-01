@@ -254,7 +254,7 @@ def fcn_p5_full(classes):
     p5 = Conv2DTranspose(filters=classes,
                          kernel_size=(14, 14),
                          strides=(1, 1),
-                         padding="valid",
+                         padding="same",
                          activation="linear",
                          kernel_initializer=Constant(bilinear_upsample_weights("full", classes)))(x)
 
@@ -300,7 +300,7 @@ def fcn_p5_image(classes):
 
     return: keras Model object
     """
-    inputs = Input(shape=(None, None, 3))
+    inputs = Input(shape=(1200, 1600, 3))
     x = Conv2D(filters=64,
                kernel_size=(3, 3),
                padding='same',
@@ -381,9 +381,9 @@ def fcn_p5_image(classes):
     x = Dropout(0.5)(x)
 
     p5 = Conv2DTranspose(filters=classes,
-                         kernel_size=(14, 14),
-                         strides=(1, 1),
-                         padding="valid",
+                         kernel_size=(4, 4),
+                         strides=(2, 2),
+                         padding="same",
                          activation="linear",
                          kernel_initializer=Constant(bilinear_upsample_weights("full", classes)))(x)
 

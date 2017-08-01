@@ -185,7 +185,7 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
     plt.close()
 
 
-def train_fcn_model(dataset, opt, lr, batch_size):
+def train_fcn_model(dataset, opt, lr, epochs, batch_size, l2_reg, decay):
     """
     train fcn with whole image.
     dataset: str, "ips" or "melanoma" + 1 - 5
@@ -193,6 +193,48 @@ def train_fcn_model(dataset, opt, lr, batch_size):
     lr: float, learning rate
     batch_size: int,
     """
+    # データセットによるクラス数指定
+    if 'ips' in dataset:
+        num_classes = 3
+    elif 'melanoma' in dataset:
+        num_classes = 2
+    else:
+        raise ValueError("dataset must be ips or melanoma")
+
+    # weights ディレクトリ作成
+    try:
+        n = dataset[-1]
+        os.makedirs("weights/valid_all/dataset_" + str(n))
+    except FileExistsError:
+        pass
+    dir_path = os.path.join("weights/valid_all/dataset_" + str(n))
+
+    model = models.fcn_p5_image(num_classes)
+
+    metrics = sparse_accuracy
+    loss_f = softmax_sparse_crossentropy
+    # optimizer指定、モデルコンパイル
+    if opt == "SGD":
+        model.compile(loss=loss_f,
+                      optimizer=SGD(lr=lr, momentum=0.9, decay=decay),
+                      metrics=[metrics]
+                      )
+    elif opt == "Adadelta":
+        lr = 1.0
+        decay = 0
+        model.compile(loss=loss_f,
+                      optimizer=Adadelta(),
+                      metrics=[metrics]
+                      )
+    elif opt == "Adam":
+        model.compile(loss=loss_f,
+                      optimizer=Adam(lr=lr, decay=decay),
+                      metrics=[metrics]
+                      )
+    else:
+        raise ValueError("argument 'opt' is wrong.")
+
+    # データ読み込み
     img_list, mask_list = tl.load_datapath(dataset)
     DL = Patch_DataLoader(img_list, mask_list)
     X_train = []
@@ -203,7 +245,55 @@ def train_fcn_model(dataset, opt, lr, batch_size):
         mask = DL.image2label(mask)
         X_train.append(img)
         y_train.append(mask)
-    return X_train, y_train
+    X_train = np.asarray(X_train) / 255.
+    y_train = np.asarray(y_train)
+    y_train = y_train.reshape(
+        y_train.shape[0], y_train.shape[1], y_train.shape[2], 1
+    )
+
+    # training
+    print("train on " + dataset)
+    start_time = timeit.default_timer()
+    model.fit(X_train, y_train,
+              batch_size=batch_size,
+              epochs=epochs,
+              verbose=1)
+    elapsed_time = (timeit.default_timer() - start_time) / 60.
+    print("train on %s takes %.2f m" % (dataset, elapsed_time))
+
+    # モデル保存
+    # fcnはなぜかjsonが作れないため例外処理する
+    try:
+        json_string = model.to_json()
+        with open(os.path.join(dir_path, "train_arch.json"), "w") as file:
+            file.write(json_string)
+    except ValueError:
+        print("couldnt save json_file, skipped")
+    finally:
+        model.save_weights(os.path.join(
+            dir_path, "train_weights.h5"), overwrite=True)
+
+    # パラメータなどをresult.txtに保存
+    with open(os.path.join(dir_path, "result.txt"), "w") as file:
+        title = ["<<", "fcn-image", ">>"]
+        title = " ".join(title)
+        file.write(title + "\n")
+        file.write("lr:" + str(lr) + "\n")
+        file.write("epochs:" + str(epochs) + "\n")
+        file.write("batch_size:" + str(batch_size) + "\n")
+        file.write("TrainingTime:%.2f m\n" % elapsed_time)
+
+    # train loss だけプロットして保存
+    loss = hist.history["loss"]
+    nb_epoch = len(loss)
+    plt.figure()
+    plt.plot(range(nb_epoch), loss, label="loss")
+    plt.legend(loc='best', fontsize=10)
+    plt.grid()
+    plt.xlabel("epoch")
+    plt.ylabel("loss")
+    plt.savefig(os.path.join(dir_path, "loss.png"))
+    plt.close()
 
 
 if __name__ == '__main__':

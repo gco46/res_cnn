@@ -168,12 +168,11 @@ def evaluate_one_image(y_true, y_pred, labels):
         tn = mat.sum() - (mat[i, :].sum() + mat[:, i].sum() - mat[i, i])
         fp = mat[:, i].sum() - mat[i, i]
         fn = mat[i, :].sum() - mat[i, i]
-        if mat.shape[0] == 2 and i == 1:
-            jaccard.append(tp / float(tp + fp + fn))
-            dice.append(2 * tp / float(2 * tp + fp + fn))
-            tpr.append(tp / float(tp + fn))
-            tnr.append(tn / float(fp + tn))
-            acc.append((tp + tn) / float(tp + tn + fp + fn))
+        jaccard.append(tp / float(tp + fp + fn))
+        dice.append(2 * tp / float(2 * tp + fp + fn))
+        tpr.append(tp / float(tp + fn))
+        tnr.append(tn / float(fp + tn))
+        acc.append((tp + tn) / float(tp + tn + fp + fn))
 
     jaccard = sum(jaccard) / len(jaccard)
     dice = sum(dice) / len(dice)
