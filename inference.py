@@ -38,15 +38,16 @@ def test_model(method, resolution, dataset, in_size, size, step,
     model.load_weights(os.path.join(model_path, "train_weights.h5"))
 
     # データ読み込み
-    img_list, mask_list = tl.load_datapath(dataset)
+    img_list, mask_list = tl.load_datapath(dataset, mode="test")
     DataLoader = Patch_DataLoader(
-        img_list, mask_list, in_size, size, step, method, resolution
+        img_list, mask_list, in_size, size, step, method, resolution,
+        mode="test"
     )
 
     print("visualize the result of " + dataset)
     # 可視化画像を保存するためのディレクトリ作成
     try:
-        if isinstance(resolution, list):
+        if isinstance(resolution, list) and len(resolution) > 1:
             for i in resolution:
                 os.makedirs(
                     os.path.join(
@@ -96,10 +97,10 @@ def test_model(method, resolution, dataset, in_size, size, step,
 
 if __name__ == '__main__':
     test_model(
-        method="classification",
-        resolution=None,
-        dataset="ips_1",
+        method="regression",
+        resolution=[2],
+        dataset="melanoma_1",
         in_size=150,
-        size=300,
+        size=150,
         step=45
     )

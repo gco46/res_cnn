@@ -77,7 +77,7 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
     dir_path = os.path.join("weights/valid_all/dataset_" + str(n))
 
     # データのパス読み込み
-    img_list, mask_list = tl.load_datapath(dataset)
+    img_list, mask_list = tl.load_datapath(dataset, mode="train")
 
     # インスタンス化はするが読み込みはあとで行う。
     DataLoader = Patch_DataLoader(
@@ -235,7 +235,7 @@ def train_fcn_model(dataset, opt, lr, epochs, batch_size, l2_reg, decay):
         raise ValueError("argument 'opt' is wrong.")
 
     # データ読み込み
-    img_list, mask_list = tl.load_datapath(dataset)
+    img_list, mask_list = tl.load_datapath(dataset, mode="train")
     DL = Patch_DataLoader(img_list, mask_list)
     X_train = []
     y_train = []
@@ -299,15 +299,15 @@ def train_fcn_model(dataset, opt, lr, epochs, batch_size, l2_reg, decay):
 if __name__ == '__main__':
     train_model(
         method="regression",
-        resolution=[1, 2, 5],
+        resolution=[2],
         dataset="melanoma_1",
-        in_size=100,
-        size=300,
-        step=300,
+        in_size=150,
+        size=150,
+        step=45,
         arch="vgg_p4",
         opt="Adam",
         lr=1e-4,
-        epochs=2,
+        epochs=1,
         batch_size=16,
         l2_reg=0,
         decay=0

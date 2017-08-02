@@ -6,15 +6,22 @@ import colorsys
 from scipy.misc import imresize
 
 
-def load_datapath(dataset):
+def load_datapath(dataset, mode):
     """
     load data path from .txt file
     dataset: str, 'ips' or 'melanoma' + '_1' to '_5'
     output: (list, list), path list of train and test data
+    mode: str, 'train' or 'test', decide to read which dataset
     """
     # dataset のパス指定して.txtからファイルパス読み込み
-    img_txt = "train_data" + dataset[-1] + ".txt"
-    mask_txt = "train_mask" + dataset[-1] + ".txt"
+    if mode == "train":
+        img_txt = "train_data" + dataset[-1] + ".txt"
+        mask_txt = "train_mask" + dataset[-1] + ".txt"
+    elif mode == "test":
+        img_txt = "test_data" + dataset[-1] + ".txt"
+        mask_txt = "test_mask" + dataset[-1] + ".txt"
+    else:
+        raise ValueError("mode must be 'train' or 'test'")
     img_txt = os.path.join("data", dataset[:-2], "dataset", img_txt)
     mask_txt = os.path.join("data", dataset[:-2], "dataset", mask_txt)
     img_list = []
@@ -62,6 +69,7 @@ class Patch_DataLoader(object):
                  step=0,
                  method=None,
                  resolution=None,
+                 mode="train",
                  threshold=0.8):
         """
         img_list: list, image path list, path is str
@@ -82,6 +90,7 @@ class Patch_DataLoader(object):
         self.step = step
         self.res = resolution
         self.method = method
+        self.mode = mode
         self.threshold = threshold
         # datasetを特定
         if 'ips' in img_list[0]:
@@ -211,13 +220,13 @@ class Patch_DataLoader(object):
             img_label[img_label > 3] = 4
             if evaluate:
                 img_label[img_label == 4] = 0
-                good = (y_true == 1).sum()
-                bad = (y_true == 2).sum()
-                bgd = (y_true == 3).sum()
+                good = (img_label == 1).sum()
+                bad = (img_label == 2).sum()
+                bgd = (img_label == 3).sum()
                 hist = np.array([good, bad, bgd])
                 if np.min(hist) < 100:
                     label = np.argmin(hist) + 1
-                    y_true[y_true == label] = 0
+                    img_label[img_label == label] = 0
             else:
                 img_label = img_label - 1
         else:
@@ -242,7 +251,7 @@ class Patch_DataLoader(object):
         elif self.method == "classification":
             h, w = m_patch.shape
             label = m_patch[h // 2, w // 2]
-            if label == 3:
+            if label == 3 and self.mode == "train":
                 target = False
             else:
                 target = np.int64(label)
@@ -297,7 +306,7 @@ class Patch_DataLoader(object):
             # ips dataset
             # others が パッチの大部分を占めていた場合、そのパッチはTraining には使わない
             n = int(m_patch.size * self.threshold)
-            if hist[-1] > n:
+            if hist[-1] > n and self.mode == "train":
                 return False
 
         for res_int in self.res:
@@ -592,7 +601,7 @@ class ProbMapConstructer(object):
                 im = imresize(
                     prob_map[n, :, :, c], (self.size, self.size)
                 )
-                patch_sample[:, :, c] = im[:, :]
+                one_prob[:, :, c] = im[:, :]
             # imresizeの戻り値は0-255のため、正規化
             result.append(one_prob / 255.)
         result = np.stack(result, axis=0)
@@ -642,6 +651,8 @@ class ProbMapConstructer(object):
                     t = res * y + x
                     tmp_map[x * l_size:(x + 1) * l_size,
                             y * l_size:(y + 1) * l_size, :] \
-                        = prob[index, 3 * t:3 * (t + 1)]
+                        = prob[index,
+                               self.num_classes * t:self.num_classes * (t + 1)
+                               ]
             result[index, :, :, :] = tmp_map[:, :, :]
         return result

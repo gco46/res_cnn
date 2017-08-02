@@ -8,16 +8,16 @@ import sys
 from sklearn.metrics import confusion_matrix
 
 
-def evaluate_model(model, data):
+def evaluate_model(model, data, mode="test"):
     """
     evaluate model with segmentation metrics.
     model: str, model name like 'regression/Adam/vgg_p4_size150'.
     data: str, ips or melanoma
     """
     if data == "ips":
-        WEIGHT_PATH = "weights/ips/"
+        w_path = "weights/ips"
     elif data == "melanoma":
-        WEIGHT_PATH = "weights/melanoma/"
+        w_path = "weights/melanoma"
     else:
         raise ValueError("'data' must be ips or melanoma curenntly.")
     # 評価指標のリストを用意して格納、表示
@@ -26,10 +26,10 @@ def evaluate_model(model, data):
     tpr = []
     tnr = []
     accuracy = []
-    for i in range(1, 6):
+    for i in range(1, 2):
         dataset = "dataset_" + str(i)
         # one fold 評価
-        j, d, tp, tn, acc = evaluate_one_fold(model, dataset)
+        j, d, tp, tn, acc = evaluate_one_fold(model, dataset, w_path, mode)
         jaccard.append(j)
         dice.append(d)
         tpr.append(tp)
@@ -57,7 +57,7 @@ def evaluate_model(model, data):
     print("tpr : ", tp_mean, "+-", tp_std)
     print("tnr : ", tn_mean, "+-", tn_std)
     print("accuracy : ", acc_mean, "+-", acc_std)
-    path = WEIGHT_PATH + model
+    path = os.path.join(w_path, model)
     result = np.array([[j_mean, j_std],
                        [d_mean, d_std],
                        [tp_mean, tp_std],
@@ -68,12 +68,12 @@ def evaluate_model(model, data):
     np.savetxt(os.path.join(path, "seg_result.txt"), result)
 
 
-def evaluate_one_fold(directory, dataset, w_path):
+def evaluate_one_fold(directory, dataset, w_path, mode):
     """
     evaluate the result of one fold, with segmentation metrics.
     directory: str, model directory path like 'regression/Adam/vgg_p4_size150'
     dataset: str, dataset_ 1 to 5
-    w_path: str, path to weights directory
+    w_path: str, path to dataset directory, like 'weights/ips'
 
     output: tuple of float, segmentation scores
             (jaccard, dice, tpr, tnr, acc)
@@ -83,7 +83,7 @@ def evaluate_one_fold(directory, dataset, w_path):
     if "label" in ld:
         # 単一resolutionの場合はそのままlabelディレクトリ読み込み
         pred_path = tl.getFilelist(
-            os.path.join(path, "label")
+            os.path.join(path, "label"), ".png"
         )
     else:
         # multi resolutionの場合は、最も解像度が高いディレクトリを読み込み
@@ -93,16 +93,9 @@ def evaluate_one_fold(directory, dataset, w_path):
                 tmp = int(d[-1])
         di = "label" + str(tmp)
         pred_path = tl.getFilelist(
-            os.path.join(path, di)
+            os.path.join(path, di), ".png"
         )
-
-    # true path読み込み
-    true_path = []
-    for line in open("dataset/test_mask" + dataset[-1] + ".txt", "r"):
-        img_file = (line.strip())
-        true_path.append(img_file)
     pred_path.sort()
-    true_path.sort()
 
     jaccard = []
     dice = []
@@ -112,15 +105,15 @@ def evaluate_one_fold(directory, dataset, w_path):
 
     # インスタンス化するために適当なパスを読み込み
     if "ips" in path:
-        img_list, mask_list = tl.load_datapath("ips_1")
+        img_list, true_path = tl.load_datapath("ips_1", mode=mode)
         labels = [1, 2, 3]
     else:
-        img_list, mask_list = tl.load_datapath("melanoma_1")
+        img_list, true_path = tl.load_datapath("melanoma_1", mode=mode)
         labels = [1, 2]
-    DL = Patch_DataLoader(img_list, mask_list)
+    DL = Patch_DataLoader(img_list, true_path)
     for pred, true in zip(pred_path, true_path):
-        pred_name, _ = os.path.splitext(pred)
-        true_name, _ = os.path.splitext(true)
+        pred_name, _ = os.path.splitext(pred.split("/")[-1])
+        true_name, _ = os.path.splitext(true.split("/")[-1])
         assert pred_name == true_name
 
         y_pred = np.array(Image.open(pred), int)
@@ -161,8 +154,10 @@ def evaluate_one_image(y_true, y_pred, labels):
     tpr = []
     tnr = []
     acc = []
-    for i in range(mat.shape[0]):
+    for i in range(len(labels)):
         if mat[i, :].sum() == 0:
+            continue
+        elif len(labels) == 2 and i == 0:
             continue
         tp = mat[i, i]
         tn = mat.sum() - (mat[i, :].sum() + mat[:, i].sum() - mat[i, i])
@@ -183,6 +178,6 @@ def evaluate_one_image(y_true, y_pred, labels):
 
 
 if __name__ == '__main__':
-    model = sys.argv[1]
-    data = sys.argv[2]
-    evaluate_model(model, data)
+    data = sys.argv[1]
+    model = sys.argv[2]
+    evaluate_model(model, data, mode="test")

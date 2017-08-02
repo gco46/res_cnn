@@ -13,7 +13,7 @@ def fcn_generator(in_size, size, step, dataset, batch_size, subsets=3):
     step: int,
     dataset: str, "ips" or "melanoma", "_1" to "_5"
     """
-    img_list, mask_list = tl.load_datapath(dataset)
+    img_list, mask_list = tl.load_datapath(dataset, mode="train")
 
     nb_samples = len(img_list)
     while 1:
