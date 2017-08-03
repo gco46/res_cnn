@@ -26,7 +26,7 @@ def evaluate_model(model, data, mode="test"):
     tpr = []
     tnr = []
     accuracy = []
-    for i in range(1, 2):
+    for i in range(1, 6):
         dataset = "dataset_" + str(i)
         # one fold 評価
         j, d, tp, tn, acc = evaluate_one_fold(model, dataset, w_path, mode)
@@ -35,6 +35,7 @@ def evaluate_model(model, data, mode="test"):
         tpr.append(tp)
         tnr.append(tn)
         accuracy.append(acc)
+        print(dataset + " is done.")
 
     jaccard = np.asarray(jaccard)
     dice = np.asarray(dice)
@@ -104,11 +105,12 @@ def evaluate_one_fold(directory, dataset, w_path, mode):
     acc = []
 
     # インスタンス化するために適当なパスを読み込み
+    d = w_path.split("/")[-1] + dataset[-2:]
     if "ips" in path:
-        img_list, true_path = tl.load_datapath("ips_1", mode=mode)
+        img_list, true_path = tl.load_datapath(d, mode=mode)
         labels = [1, 2, 3]
     else:
-        img_list, true_path = tl.load_datapath("melanoma_1", mode=mode)
+        img_list, true_path = tl.load_datapath(d, mode=mode)
         labels = [1, 2]
     DL = Patch_DataLoader(img_list, true_path)
     for pred, true in zip(pred_path, true_path):
