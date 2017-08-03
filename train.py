@@ -8,6 +8,7 @@ from models import softmax_sparse_crossentropy, sparse_accuracy
 from keras.utils import np_utils
 from keras.optimizers import SGD, Adam
 from keras.models import model_from_json
+import keras.backend as K
 
 import matplotlib as mpl
 mpl.use("Agg")
@@ -240,8 +241,10 @@ def train_fcn_model(dataset, opt, lr, epochs, batch_size, l2_reg, decay):
     X_train = []
     y_train = []
     for im, ma in zip(img_list, mask_list):
-        img = np.array(Image.open(im), dtype=np.float32)
-        mask = np.array(Image.open(im), dtype=int)
+        img = Image.open(im).resize((1200, 900))
+        img = np.array(img, dtype=np.float32)
+        mask = Image.open(ma).resize((1200, 900))
+        mask = np.array(mask, dtype=int)
         mask = DL.image2label(mask)
         X_train.append(img)
         y_train.append(mask)
@@ -254,10 +257,10 @@ def train_fcn_model(dataset, opt, lr, epochs, batch_size, l2_reg, decay):
     # training
     print("train on " + dataset)
     start_time = timeit.default_timer()
-    model.fit(X_train, y_train,
-              batch_size=batch_size,
-              epochs=epochs,
-              verbose=1)
+    hist = model.fit(X_train, y_train,
+                     batch_size=batch_size,
+                     epochs=epochs,
+                     verbose=1)
     elapsed_time = (timeit.default_timer() - start_time) / 60.
     print("train on %s takes %.2f m" % (dataset, elapsed_time))
 
@@ -297,18 +300,30 @@ def train_fcn_model(dataset, opt, lr, epochs, batch_size, l2_reg, decay):
 
 
 if __name__ == '__main__':
-    train_model(
-        method="regression",
-        resolution=[2],
-        dataset="melanoma_1",
-        in_size=150,
-        size=150,
-        step=45,
-        arch="vgg_p4",
-        opt="Adam",
-        lr=1e-4,
-        epochs=1,
-        batch_size=16,
-        l2_reg=0,
-        decay=0
-    )
+    K.clear_session()
+    for i in range(1, 6):
+        dataset = "ips_" + str(i)
+        train_fcn_model(
+            dataset=dataset,
+            opt="Adam",
+            lr=1e-5,
+            epochs=100,
+            batch_size=1,
+            l2_reg=0,
+            decay=0
+        )
+    # train_model(
+    #     method="regression",
+    #     resolution=[2],
+    #     dataset="melanoma_1",
+    #     in_size=150,
+    #     size=150,
+    #     step=45,
+    #     arch="vgg_p4",
+    #     opt="Adam",
+    #     lr=1e-4,
+    #     epochs=1,
+    #     batch_size=16,
+    #     l2_reg=0,
+    #     decay=0
+    # )

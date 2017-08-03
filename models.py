@@ -302,7 +302,7 @@ def fcn_p5_image(classes):
 
     return: keras Model object
     """
-    inputs = Input(shape=(None, None, 3))
+    inputs = Input(shape=(900, 1200, 3))
     x = Conv2D(filters=64,
                kernel_size=(3, 3),
                padding='same',
@@ -424,7 +424,7 @@ def fcn_p5_image(classes):
                         activation="linear",
                         kernel_initializer=Constant(bilinear_upsample_weights(8, classes)))(p345)
 
-    x = ZeroPadding2D(padding=(1, 1))(x)
+    x = ZeroPadding2D(padding=(2, 2))(x)
     x = CroppingLike2D(K.int_shape(inputs))(x)
     model = Model(inputs=inputs, outputs=x)
     return model

@@ -362,9 +362,20 @@ class Patch_DataLoader(object):
 
 
 class ProbMapConstructer(object):
+    """
+    Inference Map(InfMap) is probabirity map of a whole image.
+    Patch Map is inference Map of a local patch.
+    Inference Image(InfImg) is visualized image of InfMap.
+    """
 
-    def __init__(self, model_out, size, step, origin_h, origin_w,
-                 data, resolution):
+    def __init__(self,
+                 model_out,
+                 size=0,
+                 step=0,
+                 origin_h=0,
+                 origin_w=0,
+                 data=None,
+                 resolution=None):
         """
         model_out: array, output of model
                    the shape is (num_samples, num_outdim)
@@ -387,9 +398,14 @@ class ProbMapConstructer(object):
         self.datatype = data
         if data == 'ips':
             self.num_classes = 3
-        else:
+        elif data == "melanoma":
             self.num_classes = 2
-        self.InfMap = self.construct_InferenceMap(model_out)
+        else:
+            raise ValueError("data must be 'ips' or 'melanoma'")
+        if self.size != 0:
+            self.InfMap = self.construct_InferenceMap(model_out)
+        else:
+            self.InfMap = model_out
 
     def save_InfMap(self, model_path, img_name):
         """
@@ -410,7 +426,7 @@ class ProbMapConstructer(object):
                     os.path.join(model_path, "label" + str(res_int), img_name)
                 )
         else:
-            vis_img, label_img = self.get_InfImg(self.InfMap)
+            vis_img, label_img = self.get_InfImg()
             vis_img = Image.fromarray(np.uint8(vis_img))
             label_img = Image.fromarray(np.uint8(label_img))
             vis_img.save(
@@ -420,10 +436,11 @@ class ProbMapConstructer(object):
                 os.path.join(model_path, "label", img_name)
             )
 
-    def get_InfImg(self, infmap):
+    def get_InfImg(self):
         """
         output: (array, array), visualized map and label image.
         """
+        infmap = self.InfMap
         if self.num_classes == 3:
             # 未推定部分は0(黒)で表示するためのmaskを作成
             summation = np.sum(infmap, axis=2)
