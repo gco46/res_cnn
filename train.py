@@ -300,14 +300,14 @@ def train_fcn_model(dataset, opt, lr, epochs, batch_size, l2_reg, decay):
 
 
 if __name__ == '__main__':
-    K.clear_session()
     for i in range(1, 6):
+        K.clear_session()
         dataset = "ips_" + str(i)
         train_fcn_model(
             dataset=dataset,
             opt="Adam",
             lr=1e-5,
-            epochs=100,
+            epochs=15,
             batch_size=1,
             l2_reg=0,
             decay=0

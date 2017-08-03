@@ -161,4 +161,6 @@ if __name__ == '__main__':
     #     size=150,
     #     step=45
     # )
-    test_fcn_model("ips_1")
+    for i in range(1, 6):
+        dataset = "ips_" + str(i)
+        test_fcn_model(dataset)
