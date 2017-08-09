@@ -80,6 +80,7 @@ def test_model(method, resolution, dataset, in_size, size, step,
 def test_fcn_model(dataset, model_path="valid"):
     """
     """
+    in_h, in_w = (1000, 1000)
     if 'ips' in dataset:
         num_classes = 3
     else:
@@ -93,7 +94,7 @@ def test_fcn_model(dataset, model_path="valid"):
         model = model_from_json(
             open(os.path.join(model_path, "train_arch.json")).read())
     except FileNotFoundError:
-        model = models.fcn_p5_image(num_classes)
+        model = models.fcn_p5_image(num_classes, (in_h, in_w, 3))
     model.load_weights(os.path.join(model_path, "train_weights.h5"))
 
     # データ読み込み
@@ -110,14 +111,20 @@ def test_fcn_model(dataset, model_path="valid"):
         file_name, ext = os.path.splitext(file_name)
         file_name = file_name + ".png"
         # データ読み込み
-        img = Image.open(im).resize((1200, 900))
-        img = np.array(img, dtype=np.float32).reshape(1, 900, 1200, 3)
+        in_img = np.zeros((1, in_h, in_w, 3)).astype(np.float32)
+        img = np.array(Image.open(im), dtype=np.float32) / 255.
+        if in_h > img.shape[0]:
+            offset = (in_h - img.shape[0]) // 2
+            in_img[0, offset:offset + img.shape[0], :, :] = img[...]
+        elif in_w > img.shape[1]:
+            offset = (in_w - img.shape[1]) // 2
+            in_img[0, :, offset:offset + img.shape[1], :] = img[...]
         # 推定
-        pred = model.predict(img)
-        pred = pred.reshape(900, 1200, 3)
-        result = np.zeros((1200, 1600, 3))
-        for c in range(3):
-            result[:, :, c] = imresize(pred[:, :, c], (1200, 1600))
+        pred = model.predict(in_img)
+        if in_h > img.shape[0]:
+            result = pred[0, offset:offset + img.shape[0], :, :]
+        else:
+            result = pred[0, :, offset:offset + img.shape[1], :]
         PMC = ProbMapConstructer(result, data=dataset[:-2])
         PMC.save_InfMap(model_path, file_name)
 
@@ -162,5 +169,5 @@ if __name__ == '__main__':
     #     step=45
     # )
     for i in range(1, 6):
-        dataset = "ips_" + str(i)
+        dataset = "melanoma_" + str(i)
         test_fcn_model(dataset)

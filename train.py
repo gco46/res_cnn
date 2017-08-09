@@ -194,6 +194,7 @@ def train_fcn_model(dataset, opt, lr, epochs, batch_size, l2_reg, decay):
     lr: float, learning rate
     batch_size: int,
     """
+    in_h, in_w = (1000, 1000)
     # データセットによるクラス数指定
     if 'ips' in dataset:
         num_classes = 3
@@ -210,7 +211,7 @@ def train_fcn_model(dataset, opt, lr, epochs, batch_size, l2_reg, decay):
         pass
     dir_path = os.path.join("weights/valid_all/dataset_" + str(n))
 
-    model = models.fcn_p5_image(num_classes)
+    model = models.fcn_p5_image(num_classes, (in_h, in_w, 3))
 
     metrics = sparse_accuracy
     loss_f = softmax_sparse_crossentropy
@@ -238,18 +239,23 @@ def train_fcn_model(dataset, opt, lr, epochs, batch_size, l2_reg, decay):
     # データ読み込み
     img_list, mask_list = tl.load_datapath(dataset, mode="train")
     DL = Patch_DataLoader(img_list, mask_list)
-    X_train = []
-    y_train = []
+    X_train = np.zeros((len(img_list), in_h, in_w, 3)).astype(np.float32)
+    y_train = np.zeros((len(img_list), in_h, in_w)) + num_classes
+    y_train = y_train.astype(np.int32)
+    n = 0
     for im, ma in zip(img_list, mask_list):
-        img = Image.open(im).resize((1200, 900))
-        img = np.array(img, dtype=np.float32)
-        mask = Image.open(ma).resize((1200, 900))
-        mask = np.array(mask, dtype=int)
+        img = np.array(Image.open(im), dtype=np.float32) / 255.
+        mask = np.array(Image.open(ma), dtype=np.int32)
         mask = DL.image2label(mask)
-        X_train.append(img)
-        y_train.append(mask)
-    X_train = np.asarray(X_train) / 255.
-    y_train = np.asarray(y_train)
+        if in_h > img.shape[0]:
+            offset = (in_h - img.shape[0]) // 2
+            X_train[n, offset:offset + img.shape[0], :, :] = img[...]
+            y_train[n, offset:offset + mask.shape[0], :] = mask[...]
+        elif in_w > img.shape[1]:
+            offset = (in_w - img.shape[1]) // 2
+            X_train[n, :, offset:offset + img.shape[1], :] = img[...]
+            y_train[n, :, offset:offset + mask.shape[1]] = mask[...]
+        n += 1
     y_train = y_train.reshape(
         y_train.shape[0], y_train.shape[1], y_train.shape[2], 1
     )
@@ -302,11 +308,11 @@ def train_fcn_model(dataset, opt, lr, epochs, batch_size, l2_reg, decay):
 if __name__ == '__main__':
     for i in range(1, 6):
         K.clear_session()
-        dataset = "ips_" + str(i)
+        dataset = "melanoma_" + str(i)
         train_fcn_model(
             dataset=dataset,
             opt="Adam",
-            lr=1e-5,
+            lr=1e-4,
             epochs=15,
             batch_size=1,
             l2_reg=0,

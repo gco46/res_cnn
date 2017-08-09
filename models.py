@@ -295,18 +295,19 @@ def fcn_p5_full(classes):
     return model
 
 
-def fcn_p5_image(classes):
+def fcn_p5_image(classes, in_shape):
     """
     VGG16 based FCN model,
     classes: int, number of classes
 
     return: keras Model object
     """
-    inputs = Input(shape=(900, 1200, 3))
+    inputs = Input(shape=in_shape)
+    x = ZeroPadding2D(padding=(100, 100))(inputs)
     x = Conv2D(filters=64,
                kernel_size=(3, 3),
                padding='same',
-               activation='relu')(inputs)
+               activation='relu')(x)
     x = Conv2D(filters=64,
                kernel_size=(3, 3),
                padding='same',
@@ -382,6 +383,7 @@ def fcn_p5_image(classes):
                activation="relu")(x)
     x = Dropout(0.5)(x)
 
+    x = ZeroPadding2D(padding=(1, 1))(x)
     p5 = Conv2DTranspose(filters=classes,
                          kernel_size=(4, 4),
                          strides=(2, 2),
@@ -399,11 +401,11 @@ def fcn_p5_image(classes):
                 activation="relu")(p4)
 
     # merge p4 and p5
-    p5 = ZeroPadding2D(padding=(10, 10))(p5)
-    p5 = CroppingLike2D(K.int_shape(p4))(p5)
+    p4 = CroppingLike2D(K.int_shape(p5))(p4)
     p45 = Add()([p4, p5])
 
     # p4+p5 を x2 upsampling
+    p45 = ZeroPadding2D(padding=(1, 1))(p45)
     p45 = Conv2DTranspose(filters=classes,
                           kernel_size=(4, 4),
                           strides=(2, 2),
@@ -412,11 +414,11 @@ def fcn_p5_image(classes):
                           kernel_initializer=Constant(bilinear_upsample_weights(2, classes)))(p45)
 
     # p3とp45をmerge
-    p45 = ZeroPadding2D(padding=(1, 1))(p45)
-    p45 = CroppingLike2D(K.int_shape(p3))(p45)
+    p3 = CroppingLike2D(K.int_shape(p45))(p3)
     p345 = Add()([p3, p45])
 
     # p3+p4+p5を x8 upsampling
+    p345 = ZeroPadding2D(padding=(4, 4))(p345)
     x = Conv2DTranspose(filters=classes,
                         kernel_size=(16, 16),
                         strides=(8, 8),
@@ -424,7 +426,6 @@ def fcn_p5_image(classes):
                         activation="linear",
                         kernel_initializer=Constant(bilinear_upsample_weights(8, classes)))(p345)
 
-    x = ZeroPadding2D(padding=(2, 2))(x)
     x = CroppingLike2D(K.int_shape(inputs))(x)
     model = Model(inputs=inputs, outputs=x)
     return model
