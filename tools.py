@@ -160,7 +160,7 @@ class Patch_DataLoader(object):
         # img, mask読み込み
         # (row, column, channels)
         img = np.array(Image.open(img_path), dtype=np.float32)
-        mask = np.array(Image.open(mask_path), dtype=int)
+        mask = np.array(Image.open(mask_path), dtype=np.int32)
         mask = self.image2label(mask)
         h, w, c = img.shape
         # test用に元画像のサイズを取得しておく
