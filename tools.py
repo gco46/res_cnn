@@ -429,12 +429,8 @@ class ProbMapConstructer(object):
             vis_img, label_img = self.get_InfImg()
             vis_img = Image.fromarray(np.uint8(vis_img))
             label_img = Image.fromarray(np.uint8(label_img))
-            vis_img.save(
-                os.path.join(model_path, "vis", img_name)
-            )
-            label_img.save(
-                os.path.join(model_path, "label", img_name)
-            )
+            vis_img.save(os.path.join(model_path, "vis", img_name))
+            label_img.save(os.path.join(model_path, "label", img_name))
 
     def get_InfImg(self):
         """
@@ -565,7 +561,6 @@ class ProbMapConstructer(object):
             prob = prob.reshape(
                 num_samples, out_size, out_size, self.num_classes
             )
-            prob = self.normalize_prob(prob)
             prob_map = self.resampling_map(prob)
             return prob_map
         elif flag == "regression":
@@ -610,17 +605,17 @@ class ProbMapConstructer(object):
         output: array, the shape is (nb_sample, self.size, self.size, 3)
         """
         result = []
+        prob_map *= 255.
         for n in range(prob_map.shape[0]):
             # サンプルごとにリサイズ
             # channelごとにリサイズして繋げる
             one_prob = np.zeros((self.size, self.size, self.num_classes))
             for c in range(self.num_classes):
-                im = imresize(
-                    prob_map[n, :, :, c], (self.size, self.size)
-                )
-                one_prob[:, :, c] = im[:, :]
-            # imresizeの戻り値は0-255のため、正規化
-            result.append(one_prob / 255.)
+                im = Image.fromarray(np.uint8(prob_map[n, :, :, c]))
+                im = im.resize((self.size, self.size))
+                im = np.array(im, dtype=np.float32)
+                one_prob[:, :, c] = im[:, :] / 255.
+            result.append(one_prob)
         result = np.stack(result, axis=0)
         return result
 

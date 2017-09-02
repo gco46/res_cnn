@@ -88,7 +88,7 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
     # モデル読み込み
     if arch == "vgg_p5":
         if method == "fcn":
-            model = models.fcn_p5_full(num_classes)
+            model = models.fcn_p5_full(out_num)
         else:
             model = models.myVGG_p5(in_size, l2_reg, method, out_num)
     elif arch == "vgg_p4":
@@ -137,7 +137,8 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
                          )
     else:
         # fcnはgeneratorで学習
-        steps_per_epoch = DataLoader.num_samples // batch_size
+        # steps_per_epoch = DataLoader.num_samples // batch_size
+        steps_per_epoch = 2089
         hist = model.fit_generator(
             generator=fcn_generator(in_size, size, step, dataset, batch_size),
             steps_per_epoch=steps_per_epoch,
@@ -186,15 +187,20 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
     plt.close()
 
 
-def train_fcn_model(dataset, opt, lr, epochs, batch_size, l2_reg, decay):
+def train_fcn_model(dataset, opt, lr, epochs, batch_size, l2_reg, decay,
+                    img_size, resize_input=False):
     """
     train fcn with whole image.
     dataset: str, "ips" or "melanoma" + 1 - 5
     opt: str,
     lr: float, learning rate
     batch_size: int,
+    img_size: tuple, (in_height, in_width)
+                when this argument is set, inputs of network are resized to
+                fixed size
+    resize_input: bool
     """
-    in_h, in_w = (1000, 1000)
+    in_h, in_w = img_size
     # データセットによるクラス数指定
     if 'ips' in dataset:
         num_classes = 3
@@ -244,8 +250,13 @@ def train_fcn_model(dataset, opt, lr, epochs, batch_size, l2_reg, decay):
     y_train = y_train.astype(np.int32)
     n = 0
     for im, ma in zip(img_list, mask_list):
-        img = np.array(Image.open(im), dtype=np.float32) / 255.
-        mask = np.array(Image.open(ma), dtype=np.int32)
+        im = Image.open(im)
+        ma = Image.open(ma)
+        if resize_input:
+            im = im.resize((in_w, in_h))
+            ma = ma.resize((in_w, in_h))
+        img = np.array(im, dtype=np.float32) / 255.
+        mask = np.array(ma, dtype=np.int32)
         mask = DL.image2label(mask)
         if in_h > img.shape[0]:
             offset = (in_h - img.shape[0]) // 2
@@ -255,6 +266,9 @@ def train_fcn_model(dataset, opt, lr, epochs, batch_size, l2_reg, decay):
             offset = (in_w - img.shape[1]) // 2
             X_train[n, :, offset:offset + img.shape[1], :] = img[...]
             y_train[n, :, offset:offset + mask.shape[1]] = mask[...]
+        elif in_h == img.shape[0] and in_w == img.shape[1]:
+            X_train[n, ...] = img[...]
+            y_train[n, ...] = mask[...]
         n += 1
     y_train = y_train.reshape(
         y_train.shape[0], y_train.shape[1], y_train.shape[2], 1
@@ -287,6 +301,7 @@ def train_fcn_model(dataset, opt, lr, epochs, batch_size, l2_reg, decay):
         title = ["<<", "fcn-image", ">>"]
         title = " ".join(title)
         file.write(title + "\n")
+        file.write("img_size:" + str(img_size) + "\n")
         file.write("lr:" + str(lr) + "\n")
         file.write("epochs:" + str(epochs) + "\n")
         file.write("batch_size:" + str(batch_size) + "\n")
@@ -306,30 +321,29 @@ def train_fcn_model(dataset, opt, lr, epochs, batch_size, l2_reg, decay):
 
 
 if __name__ == '__main__':
+    # for i in range(1, 6):
+    #     K.clear_session()
+    #     dataset = "ips_" + str(i)
+    #     train_model(
+    #         dataset=dataset,
+    #         opt="Adam",
+    #         lr=1e-5,
+    #         epochs=15,
+    #         batch_size=1,
+    #         l2_reg=0,
+    #         decay=0
+    #     )
     for i in range(1, 6):
         K.clear_session()
-        dataset = "melanoma_" + str(i)
+        dataset = "ips_" + str(i)
         train_fcn_model(
             dataset=dataset,
             opt="Adam",
-            lr=1e-4,
-            epochs=15,
+            lr=1e-5,
+            epochs=100,
             batch_size=1,
             l2_reg=0,
-            decay=0
+            decay=0,
+            img_size=(900, 1200),
+            resize_input=True
         )
-    # train_model(
-    #     method="regression",
-    #     resolution=[2],
-    #     dataset="melanoma_1",
-    #     in_size=150,
-    #     size=150,
-    #     step=45,
-    #     arch="vgg_p4",
-    #     opt="Adam",
-    #     lr=1e-4,
-    #     epochs=1,
-    #     batch_size=16,
-    #     l2_reg=0,
-    #     decay=0
-    # )

@@ -8,6 +8,7 @@ import os
 from PIL import Image
 import numpy as np
 from scipy.misc import imresize
+import keras.backend as K
 
 
 def test_model(method, resolution, dataset, in_size, size, step,
@@ -51,7 +52,9 @@ def test_model(method, resolution, dataset, in_size, size, step,
     # 可視化画像を保存するためのディレクトリ作成
     make_vis_dirs(model_path, resolution)
 
-    start_time = timeit.default_timer()
+    # elapsed_time = 0.
+    # elapsed_map_time = 0.
+    # p_count = 0
     for img_path, mask_path in zip(img_list, mask_list):
         # 可視化画像の名前を取得
         file_name = img_path.split("/")[-1]
@@ -62,9 +65,12 @@ def test_model(method, resolution, dataset, in_size, size, step,
         height = DataLoader.height
         width = DataLoader.width
         patches = patches.reshape(patches.shape[0], in_size, in_size, 3)
+        # p_count += patches.shape[0]
         patches /= 255.
         # 推定
+        # start_time = timeit.default_timer()
         prob = model.predict(patches, batch_size=16)
+        # elapsed_time += timeit.default_timer() - start_time
         PMC = ProbMapConstructer(
             model_out=prob,
             size=size,
@@ -75,12 +81,17 @@ def test_model(method, resolution, dataset, in_size, size, step,
             resolution=resolution
         )
         PMC.save_InfMap(model_path, file_name)
+        # elapsed_map_time += timeit.default_timer() - start_time
+    # test_time = elapsed_time / p_count
+    # test_map_time = elapsed_map_time / len(img_list)
+    # print("test on %s takes %.7f s" % (dataset, test_time))
+    # print("test on %s takes %.7f s" % (dataset, test_map_time))
 
 
-def test_fcn_model(dataset, model_path="valid"):
+def test_fcn_model(dataset, img_size, resize_input=False, model_path="valid"):
     """
     """
-    in_h, in_w = (1000, 1000)
+    in_h, in_w = img_size
     if 'ips' in dataset:
         num_classes = 3
     else:
@@ -104,7 +115,7 @@ def test_fcn_model(dataset, model_path="valid"):
     # 可視化画像を保存するためのディレクトリ作成
     make_vis_dirs(model_path)
 
-    start_time = timeit.default_timer()
+    elapsed_time = 0.
     for im in img_list:
         # 可視化画像の名前を取得
         file_name = im.split("/")[-1]
@@ -112,21 +123,61 @@ def test_fcn_model(dataset, model_path="valid"):
         file_name = file_name + ".png"
         # データ読み込み
         in_img = np.zeros((1, in_h, in_w, 3)).astype(np.float32)
-        img = np.array(Image.open(im), dtype=np.float32) / 255.
+        im = Image.open(im)
+        if resize_input:
+            im = im.resize((in_w, in_h))
+        img = np.array(im, dtype=np.float32) / 255.
         if in_h > img.shape[0]:
             offset = (in_h - img.shape[0]) // 2
             in_img[0, offset:offset + img.shape[0], :, :] = img[...]
         elif in_w > img.shape[1]:
             offset = (in_w - img.shape[1]) // 2
             in_img[0, :, offset:offset + img.shape[1], :] = img[...]
+        else:
+            in_img[0, ...] = img[...]
+            offset = 0
         # 推定
+        start_time = timeit.default_timer()
         pred = model.predict(in_img)
+        pred = normalize_infmap(pred)
+
+        if resize_input:
+            pred = resample_infmap(pred)
+
         if in_h > img.shape[0]:
             result = pred[0, offset:offset + img.shape[0], :, :]
-        else:
+        elif in_w > img.shape[1]:
             result = pred[0, :, offset:offset + img.shape[1], :]
+        else:
+            result = pred[0, ...]
         PMC = ProbMapConstructer(result, data=dataset[:-2])
+        elapsed_time += timeit.default_timer() - start_time
         PMC.save_InfMap(model_path, file_name)
+    test_time = elapsed_time / len(img_list)
+    print("test on %s takes %.7f m" % (dataset, test_time))
+
+
+def resample_infmap(prob_map, img_h=1200, img_w=1600):
+    result = np.zeros((1, img_h, img_w, 3))
+    prob_map *= 255
+    for c in range(prob_map.shape[-1]):
+        tmp = Image.fromarray(np.uint8(prob_map[0, :, :, c]))
+        tmp = tmp.resize((img_w, img_h))
+        tmp = np.array(tmp, dtype=np.float32)
+        result[:, :, :, c] = tmp[...] / 255.
+    return result
+
+
+def normalize_infmap(prob_map):
+    n, h, w, c = prob_map.shape
+    reshaped_prob = prob_map.reshape(-1, c)
+    total = np.sum(reshaped_prob, axis=1)
+    sum_axis = np.zeros(reshaped_prob.shape)
+    for i in range(c):
+        sum_axis[:, i] = total
+    norm_prob = reshaped_prob / sum_axis
+    result = norm_prob.reshape(n, h, w, c)
+    return result
 
 
 def make_vis_dirs(model_path, resolution=None):
@@ -160,14 +211,11 @@ def make_vis_dirs(model_path, resolution=None):
 
 
 if __name__ == '__main__':
-    # test_model(
-    #     method="regression",
-    #     resolution=[2],
-    #     dataset="melanoma_1",
-    #     in_size=150,
-    #     size=150,
-    #     step=45
-    # )
     for i in range(1, 6):
         dataset = "melanoma_" + str(i)
-        test_fcn_model(dataset)
+        test_fcn_model(
+            dataset=dataset,
+            img_size=(1000, 1000),
+            resize_input=False,
+            model_path="melanoma/fcn_image/Adam"
+        )
