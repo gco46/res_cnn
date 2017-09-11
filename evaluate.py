@@ -8,26 +8,21 @@ import sys
 from sklearn.metrics import confusion_matrix
 
 
-def evaluate_model(model, data, mode="test"):
+def evaluate_model(model, w_path="weights", mode="test"):
     """
     evaluate model with segmentation metrics.
     model: str, model name like 'regression/Adam/vgg_p4_size150'.
     data: str, ips or melanoma
     """
-    if data == "ips":
-        w_path = "weights/ips"
-    elif data == "melanoma":
-        w_path = "weights/melanoma"
-    else:
-        raise ValueError("'data' must be ips or melanoma curenntly.")
     # 評価指標のリストを用意して格納、表示
     jaccard = []
     dice = []
     tpr = []
     tnr = []
     accuracy = []
+    data = model.split("/")[0]
     for i in range(1, 6):
-        dataset = "dataset_" + str(i)
+        dataset = data + "_" + str(i)
         # one fold 評価
         j, d, tp, tn, acc = evaluate_one_fold(model, dataset, w_path, mode)
         jaccard.append(j)
@@ -73,13 +68,14 @@ def evaluate_one_fold(directory, dataset, w_path, mode):
     """
     evaluate the result of one fold, with segmentation metrics.
     directory: str, model directory path like 'regression/Adam/vgg_p4_size150'
-    dataset: str, dataset_ 1 to 5
+    dataset: str, ips_ or melanoma_  1 to 5
     w_path: str, path to dataset directory, like 'weights/ips'
 
     output: tuple of float, segmentation scores
             (jaccard, dice, tpr, tnr, acc)
     """
-    path = os.path.join(w_path, directory, dataset)
+    dname = "dataset_" + dataset[-1]
+    path = os.path.join(w_path, directory, dname)
     ld = os.listdir(path)
     if "label" in ld:
         # 単一resolutionの場合はそのままlabelディレクトリ読み込み
@@ -105,12 +101,11 @@ def evaluate_one_fold(directory, dataset, w_path, mode):
     acc = []
 
     # インスタンス化するために適当なパスを読み込み
-    d = w_path.split("/")[-1] + dataset[-2:]
     if "ips" in path:
-        img_list, true_path = tl.load_datapath(d, mode=mode)
+        img_list, true_path = tl.load_datapath(dataset, mode=mode)
         labels = [1, 2, 3]
     else:
-        img_list, true_path = tl.load_datapath(d, mode=mode)
+        img_list, true_path = tl.load_datapath(dataset, mode=mode)
         labels = [1, 2]
     DL = Patch_DataLoader(img_list, true_path)
     for pred, true in zip(pred_path, true_path):
@@ -180,6 +175,5 @@ def evaluate_one_image(y_true, y_pred, labels):
 
 
 if __name__ == '__main__':
-    data = sys.argv[1]
     model = sys.argv[2]
     evaluate_model(model, data, mode="test")
