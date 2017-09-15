@@ -33,6 +33,7 @@ def make_model_name(arch, size, res):
     model_name = arch + size + suffix
     return model_name
 
+
 data = "ips"
 
 in_size = 150

@@ -305,8 +305,13 @@ class Patch_DataLoader(object):
         if self.datatype == 'ips':
             # ips dataset
             # others が パッチの大部分を占めていた場合、そのパッチはTraining には使わない
-            n = int(m_patch.size * self.threshold)
-            if hist[-1] > n and self.mode == "train":
+            # n = int(m_patch.size * self.threshold)
+            # if hist[-1] > n and self.mode == "train":
+            #     return False
+
+            # 中心ピクセルがothersだった場合、Trainingには使わない
+            h, w = m_patch.shape
+            if m_patch[h // 2, w // 2] == 3 and self.mode == "train":
                 return False
 
         for res_int in self.res:
@@ -426,17 +431,16 @@ class ProbMapConstructer(object):
                     os.path.join(model_path, "label" + str(res_int), img_name)
                 )
         else:
-            vis_img, label_img = self.get_InfImg()
+            vis_img, label_img = self.get_InfImg(self.InfMap)
             vis_img = Image.fromarray(np.uint8(vis_img))
             label_img = Image.fromarray(np.uint8(label_img))
             vis_img.save(os.path.join(model_path, "vis", img_name))
             label_img.save(os.path.join(model_path, "label", img_name))
 
-    def get_InfImg(self):
+    def get_InfImg(self, infmap):
         """
         output: (array, array), visualized map and label image.
         """
-        infmap = self.InfMap
         if self.num_classes == 3:
             # 未推定部分は0(黒)で表示するためのmaskを作成
             summation = np.sum(infmap, axis=2)
