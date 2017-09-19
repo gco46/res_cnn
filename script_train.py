@@ -33,16 +33,17 @@ def make_model_name(arch, size, res):
     model_name = arch + size + suffix
     return model_name
 
-data = "ips"
+
+data = "melanoma"
 
 in_size = 150
 size = [50, 100, 150, 300]
-step = 45
-resolution = [[1], [2], [5], [1, 2, 5]]
+step = 35
+resolution = [[1, 2, 5]]
 lr = 1e-4
 opt = "Adam"
-batch_size = 16
-epochs = 1
+batch_size = 64
+epochs = 15
 decay = 0
 l2_reg = 0
 arch = "vgg_p4"
