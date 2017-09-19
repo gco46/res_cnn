@@ -34,7 +34,7 @@ def make_model_name(arch, size, res):
     return model_name
 
 
-data = "melanoma"
+data = "ips"
 
 in_size = 150
 size = [50, 100, 150, 300]
