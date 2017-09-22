@@ -37,15 +37,15 @@ def make_model_name(arch, size, res):
 data = "ips"
 
 in_size = 150
-size = [50, 100, 150, 300]
-step = 35
-resolution = [[1, 2, 5]]
+size = [150, 300]
+step = 45
+resolution = [None, [1], [2], [5], [1, 2, 5]]
 lr = 1e-4
 opt = "Adam"
-batch_size = 64
+batch_size = 16
 epochs = 15
 decay = 0
-l2_reg = 0
+l2_reg = 0.0001
 arch = "vgg_p4"
 
 for s in size:
@@ -77,8 +77,8 @@ for s in size:
                 lr=lr,
                 epochs=epochs,
                 batch_size=batch_size,
-                l2_reg=0,
-                decay=0
+                l2_reg=l2_reg,
+                decay=decay
             )
             test_model(
                 method=method,

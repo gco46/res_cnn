@@ -321,29 +321,35 @@ def train_fcn_model(dataset, opt, lr, epochs, batch_size, l2_reg, decay,
 
 
 if __name__ == '__main__':
-    # for i in range(1, 6):
-    #     K.clear_session()
-    #     dataset = "ips_" + str(i)
-    #     train_model(
-    #         dataset=dataset,
-    #         opt="Adam",
-    #         lr=1e-5,
-    #         epochs=15,
-    #         batch_size=1,
-    #         l2_reg=0,
-    #         decay=0
-    #     )
     for i in range(1, 6):
         K.clear_session()
         dataset = "ips_" + str(i)
-        train_fcn_model(
+        train_model(
+            method="regression",
+            resolution=[2],
             dataset=dataset,
+            in_size=150,
+            size=150,
+            step=45,
+            arch="vgg_p4",
             opt="Adam",
-            lr=1e-5,
-            epochs=100,
-            batch_size=1,
+            lr=1e-4,
+            epochs=15,
+            batch_size=16,
             l2_reg=0,
-            decay=0,
-            img_size=(900, 1200),
-            resize_input=True
+            decay=0
         )
+    # for i in range(1, 6):
+    #     K.clear_session()
+    #     dataset = "ips_" + str(i)
+    #     train_fcn_model(
+    #         dataset=dataset,
+    #         opt="Adam",
+    #         lr=1e-5,
+    #         epochs=100,
+    #         batch_size=1,
+    #         l2_reg=0,
+    #         decay=0,
+    #         img_size=(900, 1200),
+    #         resize_input=True
+    #     )
