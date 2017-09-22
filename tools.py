@@ -665,8 +665,8 @@ class ProbMapConstructer(object):
             for y in range(res):            # local resolution loop axis_y
                 for x in range(res):        # local resolution loop axis_x
                     t = res * y + x
-                    tmp_map[x * l_size:(x + 1) * l_size,
-                            y * l_size:(y + 1) * l_size, :] \
+                    tmp_map[y * l_size:(y + 1) * l_size,
+                            x * l_size:(x + 1) * l_size, :] \
                         = prob[index,
                                self.num_classes * t:self.num_classes * (t + 1)
                                ]
