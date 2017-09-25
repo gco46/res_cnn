@@ -175,5 +175,5 @@ def evaluate_one_image(y_true, y_pred, labels):
 
 
 if __name__ == '__main__':
-    model = sys.argv[2]
-    evaluate_model(model, data, mode="test")
+    model = sys.argv[1]
+    evaluate_model(model, mode="test")
