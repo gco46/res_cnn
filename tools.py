@@ -3,7 +3,6 @@ import os
 import numpy as np
 from PIL import Image
 import colorsys
-from scipy.misc import imresize
 
 
 def load_datapath(dataset, mode):
@@ -305,14 +304,14 @@ class Patch_DataLoader(object):
         if self.datatype == 'ips':
             # ips dataset
             # others が パッチの大部分を占めていた場合、そのパッチはTraining には使わない
-            # n = int(m_patch.size * self.threshold)
-            # if hist[-1] > n and self.mode == "train":
-            #     return False
+            n = int(m_patch.size * self.threshold)
+            if hist[-1] > n and self.mode == "train":
+                return False
 
             # 中心ピクセルがothersだった場合、Trainingには使わない
-            h, w = m_patch.shape
-            if m_patch[h // 2, w // 2] == 3 and self.mode == "train":
-                return False
+            # h, w = m_patch.shape
+            # if m_patch[h // 2, w // 2] == 3 and self.mode == "train":
+            #     return False
 
         for res_int in self.res:
             # resolution を一つずつみてtarget histogramをつくる
