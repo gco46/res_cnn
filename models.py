@@ -13,7 +13,6 @@ from keras.initializers import Constant
 from keras.regularizers import l2
 from keras.engine.topology import Layer
 import keras.backend as K
-import tensorflow as tf
 import numpy as np
 from keras.utils import conv_utils
 from keras.engine.topology import Layer
@@ -166,18 +165,19 @@ def myVGG_p5(size, l2_reg, method, out_num):
     return model
 
 
-def fcn_p5_full(classes):
+def FCN_8s(classes, in_shape):
     """
     VGG16 based FCN model,
     classes: int, number of classes
 
     return: keras Model object
     """
-    inputs = Input(shape=(224, 224, 3))
+    inputs = Input(shape=in_shape)
+    x = ZeroPadding2D(padding=(100, 100))(inputs)
     x = Conv2D(filters=64,
                kernel_size=(3, 3),
                padding='same',
-               activation='relu')(inputs)
+               activation='relu')(x)
     x = Conv2D(filters=64,
                kernel_size=(3, 3),
                padding='same',
@@ -254,11 +254,11 @@ def fcn_p5_full(classes):
     x = Dropout(0.5)(x)
 
     p5 = Conv2DTranspose(filters=classes,
-                         kernel_size=(14, 14),
-                         strides=(1, 1),
+                         kernel_size=(4, 4),
+                         strides=(2, 2),
                          padding="same",
                          activation="linear",
-                         kernel_initializer=Constant(bilinear_upsample_weights("full", classes)))(x)
+                         kernel_initializer=Constant(bilinear_upsample_weights(2, classes)))(x)
 
     # pool3 のfeature mapを次元圧縮
     p3 = Conv2D(filters=classes,
@@ -270,9 +270,11 @@ def fcn_p5_full(classes):
                 activation="relu")(p4)
 
     # merge p4 and p5
+    p4 = CroppingLike2D(K.int_shape(p5))(p4)
     p45 = Add()([p4, p5])
 
     # p4+p5 を x2 upsampling
+    p45 = ZeroPadding2D(padding=(1, 1))(p45)
     p45 = Conv2DTranspose(filters=classes,
                           kernel_size=(4, 4),
                           strides=(2, 2),
@@ -281,9 +283,11 @@ def fcn_p5_full(classes):
                           kernel_initializer=Constant(bilinear_upsample_weights(2, classes)))(p45)
 
     # p3とp45をmerge
+    p3 = CroppingLike2D(K.int_shape(p45))(p3)
     p345 = Add()([p3, p45])
 
     # p3+p4+p5を x8 upsampling
+    p345 = ZeroPadding2D(padding=(1, 1))(p345)
     x = Conv2DTranspose(filters=classes,
                         kernel_size=(16, 16),
                         strides=(8, 8),
@@ -291,6 +295,7 @@ def fcn_p5_full(classes):
                         activation="linear",
                         kernel_initializer=Constant(bilinear_upsample_weights(8, classes)))(p345)
 
+    x = CroppingLike2D(K.int_shape(inputs))(x)
     model = Model(inputs=inputs, outputs=x)
     return model
 
@@ -537,25 +542,27 @@ def softmax_sparse_crossentropy(y_true, y_pred):
     # y_predをベクトル化してsoftmaxかける(ピクセル毎に独立として扱う)
     # shape = (nb_samples, num_class)
     y_pred = K.reshape(y_pred, (-1, K.int_shape(y_pred)[-1]))
-    log_softmax = tf.nn.log_softmax(y_pred)
+    log_softmax = y_pred - K.logsumexp(y_pred, axis=1, keepdims=True)
+    # log_softmax = tf.nn.log_softmax(y_pred)
 
     # y_trueをベクトル化、ignore labelを含めたone-hot表現に直す
     # shape = (nb_samples, num_class + 1)
-    y_true = K.one_hot(tf.to_int32(K.flatten(y_true)),
+    y_true = K.one_hot(K.cast((K.flatten(y_true)), dtype="int32"),
                        K.int_shape(y_pred)[-1] + 1)
     # class axisで分解し、(nb_samples, 1)のベクトルをリストに格納する
     # その後最後のラベル(ignore label)のベクトルを除去して新たなone-hot行列を得る
     # shape = (nb_samples, num_class)
-    unpacked = tf.unstack(y_true, axis=-1)
-    y_true = tf.stack(unpacked[:-1], axis=-1)
+    y_true = y_true[:, :-1]
+    # unpacked = tf.unstack(y_true, axis=-1)
+    # y_true = tf.stack(unpacked[:-1], axis=-1)
 
     # closs entropyを計算し、ピクセル毎の和を算出した後
     # 全ピクセルの和を計算する
     # 平均でもいいか...?
     cross_entropy = -K.sum(y_true * log_softmax, axis=1)
-    cross_entropy_mean = K.mean(cross_entropy)
+    cross_entropy = K.mean(cross_entropy)
 
-    return cross_entropy_mean
+    return cross_entropy
 
 
 def sparse_accuracy(y_true, y_pred):
@@ -567,10 +574,20 @@ def sparse_accuracy(y_true, y_pred):
     nb_classes = K.int_shape(y_pred)[-1]
     y_pred = K.reshape(y_pred, (-1, nb_classes))
 
-    y_true = K.one_hot(tf.to_int32(K.flatten(y_true)),
+    y_true = K.one_hot(K.cast((K.flatten(y_true)), dtype="int32"),
                        nb_classes + 1)
-    unpacked = tf.unstack(y_true, axis=-1)
-    legal_labels = ~tf.cast(unpacked[-1], tf.bool)
-    y_true = tf.stack(unpacked[:-1], axis=-1)
 
-    return K.sum(tf.to_float(legal_labels & K.equal(K.argmax(y_true, axis=-1), K.argmax(y_pred, axis=-1)))) / K.sum(tf.to_float(legal_labels))
+    legal_labels = ~K.cast(y_true[:, -1], "bool")
+    y_true = y_true[:, :-1]
+    # unpacked = tf.unstack(y_true, axis=-1)
+    # legal_labels = ~tf.cast(unpacked[-1], tf.bool)
+    # y_true = tf.stack(unpacked[:-1], axis=-1)
+
+    result = K.equal(K.argmax(y_true, axis=-1), K.argmax(y_pred, axis=-1))
+    score = K.sum(K.cast(legal_labels & result, "float32"))
+    total = K.sum(K.cast(legal_labels, "float32"))
+    return score / total
+
+    # return K.sum(tf.to_float(legal_labels & K.equal(K.argmax(y_true,
+    # axis=-1), K.argmax(y_pred, axis=-1)))) /
+    # K.sum(tf.to_float(legal_labels))
