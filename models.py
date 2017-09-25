@@ -19,7 +19,7 @@ from keras.engine.topology import Layer
 from keras.engine import InputSpec
 
 
-def bilinear_upsample_weights(factor, number_of_classes):
+def bilinear_upsample_weights(factor, n_class, out_ch):
     if factor == "full":
         filter_size = 14
     else:
@@ -32,10 +32,10 @@ def bilinear_upsample_weights(factor, number_of_classes):
     og = np.ogrid[:filter_size, :filter_size]
     upsample_kernel = (1 - abs(og[0] - center) /
                        factor) * (1 - abs(og[1] - center) / factor)
-    weights = np.zeros((filter_size, filter_size, number_of_classes, number_of_classes),
+    weights = np.zeros((filter_size, filter_size, n_class, out_ch),
                        dtype=np.float32)
-    for i in range(number_of_classes):
-        weights[:, :, i, i] = upsample_kernel
+    for i in range(n_class):
+        weights[:, :, i, :] = upsample_kernel[:, :, None]
     return weights
 
 
@@ -258,7 +258,9 @@ def FCN_8s(classes, in_shape):
                          strides=(2, 2),
                          padding="same",
                          activation="linear",
-                         kernel_initializer=Constant(bilinear_upsample_weights(2, classes)))(x)
+                         kernel_initializer=Constant(
+                             bilinear_upsample_weights(2, classes, 4096)
+                         ))(x)
 
     # pool3 のfeature mapを次元圧縮
     p3 = Conv2D(filters=classes,
@@ -280,7 +282,9 @@ def FCN_8s(classes, in_shape):
                           strides=(2, 2),
                           padding="same",
                           activation="linear",
-                          kernel_initializer=Constant(bilinear_upsample_weights(2, classes)))(p45)
+                          kernel_initializer=Constant(
+                              bilinear_upsample_weights(2, classes, classes)
+                          ))(p45)
 
     # p3とp45をmerge
     p3 = CroppingLike2D(K.int_shape(p45))(p3)
@@ -293,7 +297,9 @@ def FCN_8s(classes, in_shape):
                         strides=(8, 8),
                         padding="same",
                         activation="linear",
-                        kernel_initializer=Constant(bilinear_upsample_weights(8, classes)))(p345)
+                        kernel_initializer=Constant(
+                            bilinear_upsample_weights(8, classes, classes)
+                        ))(p345)
 
     x = CroppingLike2D(K.int_shape(inputs))(x)
     model = Model(inputs=inputs, outputs=x)
