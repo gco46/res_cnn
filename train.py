@@ -86,18 +86,19 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
     )
 
     # モデル読み込み
-    if arch == "vgg_p5":
-        if method == "fcn":
-            model = models.fcn_p5_full(out_num)
-        else:
-            model = models.myVGG_p5(in_size, l2_reg, method, out_num)
-    elif arch == "vgg_p4":
-        if method == "fcn":
-            raise ValueError("fcn has only vgg_p5 models")
-        else:
-            model = models.myVGG_p4(in_size, l2_reg, method, out_num)
+    if method == "fcn":
+        arch = "FCN_8s"
+        print("arch : ", arch)
+        in_shape = (in_size, in_size, 3)
+        model = models.FCN_8s(num_classes, in_shape)
     else:
-        ValueError("now support only vgg_p5")
+        print("arch :", arch)
+        if arch == "vgg_p5":
+            model = models.myVGG_p5(in_size, l2_reg, method, out_num)
+        elif arch == "vgg_p4":
+            model = models.myVGG_p4(in_size, l2_reg, method, out_num)
+        else:
+            raise ValueError("unknown arch")
 
     # optimizer指定、モデルコンパイル
     if opt == "SGD":
@@ -137,8 +138,8 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
                          )
     else:
         # fcnはgeneratorで学習
-        # steps_per_epoch = DataLoader.num_samples // batch_size
-        steps_per_epoch = 2089
+        steps_per_epoch = DataLoader.num_samples // batch_size
+        # steps_per_epoch = 2089
         hist = model.fit_generator(
             generator=fcn_generator(in_size, size, step, dataset, batch_size),
             steps_per_epoch=steps_per_epoch,
@@ -325,17 +326,17 @@ if __name__ == '__main__':
         K.clear_session()
         dataset = "ips_" + str(i)
         train_model(
-            method="regression",
-            resolution=[2],
+            method="fcn",
+            resolution=None,
             dataset=dataset,
-            in_size=150,
+            in_size=224,
             size=150,
             step=45,
-            arch="vgg_p4",
+            arch="vgg_p5",
             opt="Adam",
             lr=1e-4,
             epochs=15,
-            batch_size=16,
+            batch_size=8,
             l2_reg=0,
             decay=0
         )
