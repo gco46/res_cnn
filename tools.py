@@ -255,6 +255,13 @@ class Patch_DataLoader(object):
             else:
                 target = np.int64(label)
         else:
+            hist = self.class_label_hist(m_patch)
+            if self.datatype == 'ips':
+                # ips dataset
+                # others が パッチの大部分を占めていた場合、そのパッチはTraining には使わない
+                n = int(m_patch.size * self.threshold)
+                if hist[-1] > n and self.mode == "train":
+                    return False
             m_patch = self.patch_resize(m_patch)
             target = m_patch.flatten()
         return target

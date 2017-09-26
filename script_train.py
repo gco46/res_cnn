@@ -15,8 +15,11 @@ def mv_dirs(model_path):
         )
 
 
-def make_model_name(arch, size, res):
+def make_model_name(arch, size, res, fcn=False):
     size = "_size" + str(size)
+    if fcn:
+        model_name = "fcn" + size
+        return model_name
     if res is None:
         suffix = "_center"
     elif len(res) == 1:
@@ -36,27 +39,27 @@ def make_model_name(arch, size, res):
 
 data = "ips"
 
-in_size = 150
-size = [150, 300]
+in_size = 224
+size = [150]
 step = 45
-resolution = [None, [1], [2], [5], [1, 2, 5]]
-lr = 1e-4
+resolution = [None]
+lr = 1e-3
 opt = "Adam"
-batch_size = 16
+batch_size = 10
 epochs = 15
 decay = 0
-l2_reg = 0.0001
+l2_reg = 0
 arch = "vgg_p4"
 
 for s in size:
     for r in resolution:
         if r is None:
-            method = "classification"
+            method = "fcn"
         else:
             method = "regression"
-        for i in range(1, 6):
+        for i in range(2, 6):
             K.clear_session()
-            model_name = make_model_name(arch, s, r)
+            model_name = make_model_name(arch, s, r, fcn=True)
             mpath = osp.join(data, method, opt, model_name)
             dataset = data + "_" + str(i)
 
