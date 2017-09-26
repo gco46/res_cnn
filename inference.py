@@ -38,7 +38,8 @@ def test_model(method, resolution, dataset, in_size, size, step,
         model = model_from_json(
             open(os.path.join(model_path, "train_arch.json")).read())
     except FileNotFoundError:
-        model = models.fcn_p5_full(num_classes)
+        in_shape = (in_size, in_size, 3)
+        model = models.FCN_8s(num_classes, in_shape)
     model.load_weights(os.path.join(model_path, "train_weights.h5"))
 
     # データ読み込み
@@ -211,13 +212,13 @@ def make_vis_dirs(model_path, resolution=None):
 
 
 if __name__ == '__main__':
-    for i in range(1, 6):
+    for i in range(1, 2):
         dataset = "ips_" + str(i)
         test_model(
-            method="regression",
-            resolution=[2],
+            method="fcn",
+            resolution=None,
             dataset=dataset,
-            in_size=150,
+            in_size=224,
             size=150,
             step=45,
             model_path="valid"
