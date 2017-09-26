@@ -3,6 +3,7 @@ import os
 import numpy as np
 from PIL import Image
 import colorsys
+from scipy.misc import imresize
 
 
 def load_datapath(dataset, mode):
@@ -107,12 +108,19 @@ class Patch_DataLoader(object):
         output: int, number of samples
         """
         num_samples = 0
-        for img_path in self.img_list:
-            img = Image.open(img_path)
-            w, h = img.size
-            y_axis = (h - self.size) // self.step + 1
-            x_axis = (w - self.size) // self.step + 1
-            num_samples += x_axis * y_axis
+        size = self.size
+        step = self.step
+        for mask_path in self.mask_list:
+            mask = np.array(Image.open(mask_path))
+            mask = self.image2label(mask)
+            h, w = mask.shape
+            for i in range((h - size) // step + 1):
+                for j in range((w - size) // step + 1):
+                    m_patch = mask[i * step:(i * step) + size,
+                                   j * step:(j * step) + size]
+                    t = self.calcTarget(m_patch)
+                    if not isinstance(t, bool):
+                        num_samples += 1
         return num_samples
 
     def load_data(self):
@@ -255,10 +263,10 @@ class Patch_DataLoader(object):
             else:
                 target = np.int64(label)
         else:
-            hist = self.class_label_hist(m_patch)
             if self.datatype == 'ips':
                 # ips dataset
                 # others が パッチの大部分を占めていた場合、そのパッチはTraining には使わない
+                hist = self.class_label_hist(m_patch)
                 n = int(m_patch.size * self.threshold)
                 if hist[-1] > n and self.mode == "train":
                     return False
@@ -311,14 +319,14 @@ class Patch_DataLoader(object):
         if self.datatype == 'ips':
             # ips dataset
             # others が パッチの大部分を占めていた場合、そのパッチはTraining には使わない
-            n = int(m_patch.size * self.threshold)
-            if hist[-1] > n and self.mode == "train":
-                return False
+            # n = int(m_patch.size * self.threshold)
+            # if hist[-1] > n and self.mode == "train":
+            #     return False
 
             # 中心ピクセルがothersだった場合、Trainingには使わない
-            # h, w = m_patch.shape
-            # if m_patch[h // 2, w // 2] == 3 and self.mode == "train":
-            #     return False
+            h, w = m_patch.shape
+            if m_patch[h // 2, w // 2] == 3 and self.mode == "train":
+                return False
 
         for res_int in self.res:
             # resolution を一つずつみてtarget histogramをつくる
