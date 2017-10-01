@@ -90,7 +90,7 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
         arch = "FCN_8s"
         print("arch : ", arch)
         in_shape = (in_size, in_size, 3)
-        model = models.FCN_8s(num_classes, in_shape)
+        model = models.FCN_8s(num_classes, in_shape, l2_reg)
     else:
         print("arch :", arch)
         if arch == "vgg_p5":
@@ -138,6 +138,9 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
                          )
     else:
         # fcnはgeneratorで学習
+        X, y = DataLoader.load_data()
+        print("data loaded.")
+        del X, y
         steps_per_epoch = DataLoader.num_samples // batch_size
         # steps_per_epoch = 2089
         hist = model.fit_generator(

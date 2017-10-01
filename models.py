@@ -165,7 +165,7 @@ def myVGG_p5(size, l2_reg, method, out_num):
     return model
 
 
-def FCN_8s(classes, in_shape):
+def FCN_8s(classes, in_shape, l2_reg):
     """
     VGG16 based FCN model,
     classes: int, number of classes
@@ -177,34 +177,41 @@ def FCN_8s(classes, in_shape):
     x = Conv2D(filters=64,
                kernel_size=(3, 3),
                padding='same',
+               kernel_regularizer=l2(l2_reg),
                activation='relu')(x)
     x = Conv2D(filters=64,
                kernel_size=(3, 3),
                padding='same',
+               kernel_regularizer=l2(l2_reg),
                activation='relu')(x)
     x = MaxPooling2D()(x)
 
     x = Conv2D(filters=128,
                kernel_size=(3, 3),
                padding="same",
+               kernel_regularizer=l2(l2_reg),
                activation='relu')(x)
     x = Conv2D(filters=128,
                kernel_size=(3, 3),
                padding="same",
+               kernel_regularizer=l2(l2_reg),
                activation='relu')(x)
     x = MaxPooling2D()(x)
 
     x = Conv2D(filters=256,
                kernel_size=(3, 3),
                padding="same",
+               kernel_regularizer=l2(l2_reg),
                activation='relu')(x)
     x = Conv2D(filters=256,
                kernel_size=(3, 3),
                padding="same",
+               kernel_regularizer=l2(l2_reg),
                activation='relu')(x)
     x = Conv2D(filters=256,
                kernel_size=(3, 3),
                padding="same",
+               kernel_regularizer=l2(l2_reg),
                activation='relu')(x)
     x = MaxPooling2D()(x)
 
@@ -214,14 +221,17 @@ def FCN_8s(classes, in_shape):
     x = Conv2D(filters=512,
                kernel_size=(3, 3),
                padding="same",
+               kernel_regularizer=l2(l2_reg),
                activation='relu')(x)
     x = Conv2D(filters=512,
                kernel_size=(3, 3),
                padding="same",
+               kernel_regularizer=l2(l2_reg),
                activation='relu')(x)
     x = Conv2D(filters=512,
                kernel_size=(3, 3),
                padding="same",
+               kernel_regularizer=l2(l2_reg),
                activation='relu')(x)
     x = MaxPooling2D()(x)
 
@@ -231,25 +241,30 @@ def FCN_8s(classes, in_shape):
     x = Conv2D(filters=512,
                kernel_size=(3, 3),
                padding="same",
+               kernel_regularizer=l2(l2_reg),
                activation='relu')(x)
     x = Conv2D(filters=512,
                kernel_size=(3, 3),
                padding="same",
+               kernel_regularizer=l2(l2_reg),
                activation='relu')(x)
     x = Conv2D(filters=512,
                kernel_size=(3, 3),
                padding="same",
+               kernel_regularizer=l2(l2_reg),
                activation='relu')(x)
     x = MaxPooling2D()(x)
 
     x = Conv2D(filters=4096,
                kernel_size=(7, 7),
                padding="valid",
+               kernel_regularizer=l2(l2_reg),
                activation="relu")(x)
     x = Dropout(0.5)(x)
     x = Conv2D(filters=4096,
                kernel_size=(1, 1),
                padding="valid",
+               kernel_regularizer=l2(l2_reg),
                activation="relu")(x)
     x = Dropout(0.5)(x)
 
@@ -258,6 +273,7 @@ def FCN_8s(classes, in_shape):
                          strides=(2, 2),
                          padding="same",
                          activation="linear",
+                         kernel_regularizer=l2(l2_reg),
                          kernel_initializer=Constant(
                              bilinear_upsample_weights(2, classes, 4096)
                          ))(x)
@@ -265,10 +281,12 @@ def FCN_8s(classes, in_shape):
     # pool3 のfeature mapを次元圧縮
     p3 = Conv2D(filters=classes,
                 kernel_size=(1, 1),
+                kernel_regularizer=l2(l2_reg),
                 activation='relu')(p3)
     # pool4のfeature mapを次元圧縮
     p4 = Conv2D(filters=classes,
                 kernel_size=(1, 1),
+                kernel_regularizer=l2(l2_reg),
                 activation="relu")(p4)
 
     # merge p4 and p5
@@ -282,6 +300,7 @@ def FCN_8s(classes, in_shape):
                           strides=(2, 2),
                           padding="same",
                           activation="linear",
+                          kernel_regularizer=l2(l2_reg),
                           kernel_initializer=Constant(
                               bilinear_upsample_weights(2, classes, classes)
                           ))(p45)
@@ -297,6 +316,7 @@ def FCN_8s(classes, in_shape):
                         strides=(8, 8),
                         padding="same",
                         activation="linear",
+                        kernel_regularizer=l2(l2_reg),
                         kernel_initializer=Constant(
                             bilinear_upsample_weights(8, classes, classes)
                         ))(p345)
