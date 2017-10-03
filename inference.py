@@ -39,7 +39,7 @@ def test_model(method, resolution, dataset, in_size, size, step,
             open(os.path.join(model_path, "train_arch.json")).read())
     except FileNotFoundError:
         in_shape = (in_size, in_size, 3)
-        model = models.FCN_8s(num_classes, in_shape, l2_reg)
+        model = models.FCN_8s(num_classes, in_shape, 0)
     model.load_weights(os.path.join(model_path, "train_weights.h5"))
 
     # データ読み込み
