@@ -6,14 +6,14 @@ import gc
 import os
 
 
-def fcn_generator(in_size, size, step, dataset, batch_size, subsets=3):
+def fcn_generator(in_size, size, step, dataset, batch_size, mode, subsets=3,):
     """
     in_size: int,
     size: int,
     step: int,
     dataset: str, "ips" or "melanoma", "_1" to "_5"
     """
-    img_list, mask_list = tl.load_datapath(dataset, mode="train")
+    img_list, mask_list = tl.load_datapath(dataset, mode=mode)
 
     nb_samples = len(img_list)
     while 1:

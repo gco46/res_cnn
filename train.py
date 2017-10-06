@@ -9,6 +9,7 @@ from keras.utils import np_utils
 from keras.optimizers import SGD, Adam
 from keras.models import model_from_json
 import keras.backend as K
+from keras.callbacks import ModelCheckpoint
 
 import matplotlib as mpl
 mpl.use("Agg")
@@ -77,12 +78,16 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
         pass
     dir_path = os.path.join("weights/valid_all/dataset_" + str(n))
 
+    tmp_weight = os.path.join(dir_path, "weights-{epoch:02d}.h5")
     # データのパス読み込み
     img_list, mask_list = tl.load_datapath(dataset, mode="train")
-
+    test_img_list, test_mask_list = tl.load_datapath(dataset, mode="test")
     # インスタンス化はするが読み込みはあとで行う。
     DataLoader = Patch_DataLoader(
         img_list, mask_list, in_size, size, step, method, resolution
+    )
+    test_DL = Patch_DataLoader(
+        test_img_list, test_mask_list, in_size, size, step, method, resolution
     )
 
     # モデル読み込み
@@ -134,7 +139,6 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
         hist = model.fit(X_train, y_train,
                          batch_size=batch_size,
                          epochs=epochs,
-                         verbose=1,
                          )
     else:
         # fcnはgeneratorで学習
@@ -142,11 +146,18 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
         print("data loaded.")
         del X, y
         steps_per_epoch = DataLoader.num_samples // batch_size
+        X, y = test_DL.load_data()
+        del X, y
+        val_step = test_DL.num_samples // batch_size
         # steps_per_epoch = 2089
         hist = model.fit_generator(
-            generator=fcn_generator(in_size, size, step, dataset, batch_size),
+            generator=fcn_generator(
+                in_size, size, step, dataset, batch_size, "train"),
             steps_per_epoch=steps_per_epoch,
-            epochs=epochs
+            epochs=epochs,
+            validation_data=fcn_generator(
+                in_size, size, step, dataset, batch_size, "test"),
+            validation_steps=val_step
         )
 
     elapsed_time = (timeit.default_timer() - start_time) / 60.
@@ -180,9 +191,11 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
 
     # train loss だけプロットして保存
     loss = hist.history["loss"]
+    val_loss = hist.history["val_loss"]
     nb_epoch = len(loss)
     plt.figure()
     plt.plot(range(nb_epoch), loss, label="loss")
+    plt.plot(range(nb_epoch), val_loss, label="val_loss")
     plt.legend(loc='best', fontsize=10)
     plt.grid()
     plt.xlabel("epoch")
