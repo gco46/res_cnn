@@ -40,7 +40,7 @@ def make_model_name(arch, size, res, fcn=False):
 data = "ips"
 
 in_size = 224
-size = [300]
+size = [150, 300]
 step = 45
 resolution = [None]
 lr = 1e-4
@@ -48,7 +48,7 @@ opt = "Adam"
 batch_size = 8
 epochs = 15
 decay = 0
-l2_reg = 0
+l2_reg = 1e-5
 arch = "vgg_p4"
 
 for s in size:
