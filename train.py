@@ -79,10 +79,14 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
 
     # データのパス読み込み
     img_list, mask_list = tl.load_datapath(dataset, mode="train")
+    test_img_list, test_mask_list = tl.load_datapath(dataset, mode="test")
 
     # インスタンス化はするが読み込みはあとで行う。
     DataLoader = Patch_DataLoader(
         img_list, mask_list, in_size, size, step, method, resolution
+    )
+    test_DL = Patch_DataLoader(
+        test_img_list, test_mask_list, in_size, size, step, method, resolution
     )
 
     # モデル読み込み
@@ -142,12 +146,26 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
         print("data loaded.")
         del X, y
         steps_per_epoch = DataLoader.num_samples // batch_size
-        # steps_per_epoch = 2089
-        hist = model.fit_generator(
-            generator=fcn_generator(in_size, size, step, dataset, batch_size),
-            steps_per_epoch=steps_per_epoch,
-            epochs=epochs
-        )
+        if "ips" in dataset:
+            X, y = test_DL.load_data()
+            del X, y
+            val_step = test_DL.num_samples // batch_size
+            hist = model.fit_generator(
+                generator=fcn_generator(
+                    in_size, size, step, dataset, batch_size, "train"),
+                steps_per_epoch=steps_per_epoch,
+                epochs=epochs,
+                validation_data=fcn_generator(
+                    in_size, size, step, dataset, batch_size, "test"),
+                validation_steps=val_step
+            )
+        else:
+            hist = model.fit_generator(
+                generator=fcn_generator(
+                    in_size, size, step, dataset, batch_size, "train", 5),
+                steps_per_epoch=steps_per_epoch,
+                epochs=epochs,
+            )
 
     elapsed_time = (timeit.default_timer() - start_time) / 60.
     print("train on %s takes %.2f m" % (dataset, elapsed_time))
@@ -180,9 +198,11 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
 
     # train loss だけプロットして保存
     loss = hist.history["loss"]
+    val_loss = hist, history["val_loss"]
     nb_epoch = len(loss)
     plt.figure()
     plt.plot(range(nb_epoch), loss, label="loss")
+    plt.plot(range(nb_epoch), val_loss, label="val_loss")
     plt.legend(loc='best', fontsize=10)
     plt.grid()
     plt.xlabel("epoch")
@@ -221,7 +241,7 @@ def train_fcn_model(dataset, opt, lr, epochs, batch_size, l2_reg, decay,
         pass
     dir_path = os.path.join("weights/valid_all/dataset_" + str(n))
 
-    model = models.fcn_p5_image(num_classes, (in_h, in_w, 3))
+    model = models.FCN_8s(num_classes, (in_h, in_w, 3), l2_reg)
 
     metrics = sparse_accuracy
     loss_f = softmax_sparse_crossentropy
@@ -325,35 +345,35 @@ def train_fcn_model(dataset, opt, lr, epochs, batch_size, l2_reg, decay,
 
 
 if __name__ == '__main__':
-    for i in range(1, 6):
-        K.clear_session()
-        dataset = "ips_" + str(i)
-        train_model(
-            method="fcn",
-            resolution=None,
-            dataset=dataset,
-            in_size=224,
-            size=150,
-            step=45,
-            arch="vgg_p5",
-            opt="Adam",
-            lr=1e-4,
-            epochs=15,
-            batch_size=8,
-            l2_reg=0,
-            decay=0
-        )
     # for i in range(1, 6):
     #     K.clear_session()
     #     dataset = "ips_" + str(i)
-    #     train_fcn_model(
+    #     train_model(
+    #         method="fcn",
+    #         resolution=None,
     #         dataset=dataset,
+    #         in_size=224,
+    #         size=150,
+    #         step=45,
+    #         arch="vgg_p5",
     #         opt="Adam",
-    #         lr=1e-5,
-    #         epochs=100,
-    #         batch_size=1,
+    #         lr=1e-4,
+    #         epochs=15,
+    #         batch_size=8,
     #         l2_reg=0,
-    #         decay=0,
-    #         img_size=(900, 1200),
-    #         resize_input=True
+    #         decay=0
     #     )
+    for i in range(1, 6):
+        K.clear_session()
+        dataset = "ips_" + str(i)
+        train_fcn_model(
+            dataset=dataset,
+            opt="Adam",
+            lr=1e-5,
+            epochs=100,
+            batch_size=1,
+            l2_reg=0,
+            decay=0,
+            img_size=(900, 1200),
+            resize_input=True
+        )
