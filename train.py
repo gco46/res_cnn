@@ -149,14 +149,14 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
         if "ips" in dataset:
             X, y = test_DL.load_data()
             del X, y
-            val_step = test_DL.num_samples // batch_size
+            val_step = test_DL.num_samples
             hist = model.fit_generator(
                 generator=fcn_generator(
                     in_size, size, step, dataset, batch_size, "train"),
                 steps_per_epoch=steps_per_epoch,
                 epochs=epochs,
                 validation_data=fcn_generator(
-                    in_size, size, step, dataset, batch_size, "test"),
+                    in_size, size, step, dataset, 1, "test", 1),
                 validation_steps=val_step
             )
         else:
@@ -198,7 +198,7 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
 
     # train loss だけプロットして保存
     loss = hist.history["loss"]
-    val_loss = hist, history["val_loss"]
+    val_loss = hist.history["val_loss"]
     nb_epoch = len(loss)
     plt.figure()
     plt.plot(range(nb_epoch), loss, label="loss")
