@@ -212,16 +212,16 @@ def make_vis_dirs(model_path, resolution=None):
 
 
 if __name__ == '__main__':
-    for i in range(1, 2):
+    for i in range(1, 6):
         dataset = "ips_" + str(i)
         test_model(
-            method="fcn",
+            method="regression",
             resolution=None,
             dataset=dataset,
             in_size=224,
             size=150,
             step=45,
-            model_path="valid"
+            model_path="ips/regression/Adam/vgg_p4_size150_res2-2"
         )
     # for i in range(1, 6):
     #     dataset = "melanoma_" + str(i)

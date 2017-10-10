@@ -156,7 +156,7 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
                 steps_per_epoch=steps_per_epoch,
                 epochs=epochs,
                 validation_data=fcn_generator(
-                    in_size, size, step, dataset, 1, "test", 1),
+                    in_size, size, step, dataset, 1, "test"),
                 validation_steps=val_step
             )
         else:
