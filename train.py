@@ -86,9 +86,6 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
     DataLoader = Patch_DataLoader(
         img_list, mask_list, in_size, size, step, method, resolution
     )
-    test_DL = Patch_DataLoader(
-        test_img_list, test_mask_list, in_size, size, step, method, resolution
-    )
 
     # モデル読み込み
     if method == "fcn":
@@ -146,18 +143,12 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
         print("data loaded.")
         del X, y
         steps_per_epoch = DataLoader.num_samples // batch_size
-        X, y = test_DL.load_data()
-        del X, y
-        val_step = test_DL.num_samples // batch_size
         # steps_per_epoch = 2089
         hist = model.fit_generator(
             generator=fcn_generator(
                 in_size, size, step, dataset, batch_size, "train"),
             steps_per_epoch=steps_per_epoch,
             epochs=epochs,
-            validation_data=fcn_generator(
-                in_size, size, step, dataset, batch_size, "test"),
-            validation_steps=val_step
         )
 
     elapsed_time = (timeit.default_timer() - start_time) / 60.
