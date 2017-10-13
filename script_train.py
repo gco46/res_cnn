@@ -40,12 +40,12 @@ def make_model_name(arch, size, res, fcn=False):
 data = "ips"
 
 in_size = 224
-size = [300]
+size = [150, 300]
 step = 45
 resolution = [None]
 lr = 1e-4
 opt = "Adam"
-batch_size = 8
+batch_size = 16
 epochs = 15
 decay = 0
 l2_reg = 0
@@ -57,7 +57,7 @@ for s in size:
             method = "fcn"
         else:
             method = "regression"
-        for i in [1, 4, 5]:
+        for i in range(1, 6):
             K.clear_session()
             model_name = make_model_name(arch, s, r, fcn=True)
             mpath = osp.join(data, method, opt, model_name)
