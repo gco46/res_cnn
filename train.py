@@ -149,14 +149,14 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
         if "ips" in dataset:
             X, y = test_DL.load_data()
             del X, y
-            val_step = test_DL.num_samples
+            val_step = test_DL.num_samples // batch_size
             hist = model.fit_generator(
                 generator=fcn_generator(
                     in_size, size, step, dataset, batch_size, "train"),
                 steps_per_epoch=steps_per_epoch,
                 epochs=epochs,
                 validation_data=fcn_generator(
-                    in_size, size, step, dataset, 1, "test", 1),
+                    in_size, size, step, dataset, batch_size, "test"),
                 validation_steps=val_step
             )
         else:
@@ -267,35 +267,11 @@ def train_fcn_model(dataset, opt, lr, epochs, batch_size, l2_reg, decay,
         raise ValueError("argument 'opt' is wrong.")
 
     # データ読み込み
-    img_list, mask_list = tl.load_datapath(dataset, mode="train")
-    DL = Patch_DataLoader(img_list, mask_list)
-    X_train = np.zeros((len(img_list), in_h, in_w, 3)).astype(np.float32)
-    y_train = np.zeros((len(img_list), in_h, in_w)) + num_classes
-    y_train = y_train.astype(np.int32)
-    n = 0
-    for im, ma in zip(img_list, mask_list):
-        im = Image.open(im)
-        ma = Image.open(ma)
-        if resize_input:
-            im = im.resize((in_w, in_h))
-            ma = ma.resize((in_w, in_h))
-        img = np.array(im, dtype=np.float32) / 255.
-        mask = np.array(ma, dtype=np.int32)
-        mask = DL.image2label(mask)
-        if in_h > img.shape[0]:
-            offset = (in_h - img.shape[0]) // 2
-            X_train[n, offset:offset + img.shape[0], :, :] = img[...]
-            y_train[n, offset:offset + mask.shape[0], :] = mask[...]
-        elif in_w > img.shape[1]:
-            offset = (in_w - img.shape[1]) // 2
-            X_train[n, :, offset:offset + img.shape[1], :] = img[...]
-            y_train[n, :, offset:offset + mask.shape[1]] = mask[...]
-        elif in_h == img.shape[0] and in_w == img.shape[1]:
-            X_train[n, ...] = img[...]
-            y_train[n, ...] = mask[...]
-        n += 1
-    y_train = y_train.reshape(
-        y_train.shape[0], y_train.shape[1], y_train.shape[2], 1
+    X_train, y_train = tl.make_fcn_input(
+        in_w, in_h, num_classes, dataset, resize_input, mode="train"
+    )
+    X_test, y_test = tl.make_fcn_input(
+        in_w, in_h, num_classes, dataset, resize_input, mode="test"
     )
 
     # training
@@ -304,6 +280,7 @@ def train_fcn_model(dataset, opt, lr, epochs, batch_size, l2_reg, decay,
     hist = model.fit(X_train, y_train,
                      batch_size=batch_size,
                      epochs=epochs,
+                     validation_data=(X_test, y_test),
                      verbose=1)
     elapsed_time = (timeit.default_timer() - start_time) / 60.
     print("train on %s takes %.2f m" % (dataset, elapsed_time))
@@ -333,9 +310,11 @@ def train_fcn_model(dataset, opt, lr, epochs, batch_size, l2_reg, decay,
 
     # train loss だけプロットして保存
     loss = hist.history["loss"]
+    val_loss = hist.history["val_loss"]
     nb_epoch = len(loss)
     plt.figure()
     plt.plot(range(nb_epoch), loss, label="loss")
+    plt.plot(range(nb_epoch), val_loss, label="val_loss")
     plt.legend(loc='best', fontsize=10)
     plt.grid()
     plt.xlabel("epoch")
@@ -369,7 +348,7 @@ if __name__ == '__main__':
         train_fcn_model(
             dataset=dataset,
             opt="Adam",
-            lr=1e-5,
+            lr=1e-4,
             epochs=100,
             batch_size=1,
             l2_reg=0,
