@@ -6,7 +6,7 @@ Created on Tue Sep  6 12:08:27 2016
 """
 
 from keras.models import Sequential, Model
-from keras.layers import Dense, Flatten, Dropout, Activation, Input
+from keras.layers import Dense, Flatten, Dropout, Activation, Input, BatchNormalization
 from keras.layers import Conv2D, Conv2DTranspose, MaxPooling2D, ZeroPadding2D
 from keras.layers.merge import Add
 from keras.initializers import Constant
@@ -180,42 +180,49 @@ def FCN_8s(classes, in_shape, l2_reg, nopad=False):
     x = Conv2D(filters=64,
                kernel_size=(3, 3),
                padding='same',
-               kernel_regularizer=l2(l2_reg),
-               activation='relu')(x)
+               kernel_regularizer=l2(l2_reg))(x)
+    x = BatchNormalization()(x)
+    x = Activation("relu")(x)
     x = Conv2D(filters=64,
                kernel_size=(3, 3),
                padding='same',
-               kernel_regularizer=l2(l2_reg),
-               activation='relu')(x)
+               kernel_regularizer=l2(l2_reg))(x)
+    x = BatchNormalization()(x)
+    x = Activation("relu")(x)
     x = MaxPooling2D()(x)
 
     x = Conv2D(filters=128,
                kernel_size=(3, 3),
                padding="same",
-               kernel_regularizer=l2(l2_reg),
-               activation='relu')(x)
+               kernel_regularizer=l2(l2_reg))(x)
+    x = BatchNormalization()(x)
+    x = Activation("relu")(x)
     x = Conv2D(filters=128,
                kernel_size=(3, 3),
                padding="same",
-               kernel_regularizer=l2(l2_reg),
-               activation='relu')(x)
+               kernel_regularizer=l2(l2_reg))(x)
+    x = BatchNormalization()(x)
+    x = Activation("relu")(x)
     x = MaxPooling2D()(x)
 
     x = Conv2D(filters=256,
                kernel_size=(3, 3),
                padding="same",
-               kernel_regularizer=l2(l2_reg),
-               activation='relu')(x)
+               kernel_regularizer=l2(l2_reg))(x)
+    x = BatchNormalization()(x)
+    x = Activation("relu")(x)
     x = Conv2D(filters=256,
                kernel_size=(3, 3),
                padding="same",
-               kernel_regularizer=l2(l2_reg),
-               activation='relu')(x)
+               kernel_regularizer=l2(l2_reg))(x)
+    x = BatchNormalization()(x)
+    x = Activation("relu")(x)
     x = Conv2D(filters=256,
                kernel_size=(3, 3),
                padding="same",
-               kernel_regularizer=l2(l2_reg),
-               activation='relu')(x)
+               kernel_regularizer=l2(l2_reg))(x)
+    x = BatchNormalization()(x)
+    x = Activation("relu")(x)
     x = MaxPooling2D()(x)
 
     # pool3のfeature mapを取得
@@ -224,18 +231,21 @@ def FCN_8s(classes, in_shape, l2_reg, nopad=False):
     x = Conv2D(filters=512,
                kernel_size=(3, 3),
                padding="same",
-               kernel_regularizer=l2(l2_reg),
-               activation='relu')(x)
+               kernel_regularizer=l2(l2_reg))(x)
+    x = BatchNormalization()(x)
+    x = Activation("relu")(x)
     x = Conv2D(filters=512,
                kernel_size=(3, 3),
                padding="same",
-               kernel_regularizer=l2(l2_reg),
-               activation='relu')(x)
+               kernel_regularizer=l2(l2_reg))(x)
+    x = BatchNormalization()(x)
+    x = Activation("relu")(x)
     x = Conv2D(filters=512,
                kernel_size=(3, 3),
                padding="same",
-               kernel_regularizer=l2(l2_reg),
-               activation='relu')(x)
+               kernel_regularizer=l2(l2_reg))(x)
+    x = BatchNormalization()(x)
+    x = Activation("relu")(x)
     x = MaxPooling2D()(x)
 
     # pool4のfeature mapを取得
@@ -244,31 +254,36 @@ def FCN_8s(classes, in_shape, l2_reg, nopad=False):
     x = Conv2D(filters=512,
                kernel_size=(3, 3),
                padding="same",
-               kernel_regularizer=l2(l2_reg),
-               activation='relu')(x)
+               kernel_regularizer=l2(l2_reg))(x)
+    x = BatchNormalization()(x)
+    x = Activation("relu")(x)
     x = Conv2D(filters=512,
                kernel_size=(3, 3),
                padding="same",
-               kernel_regularizer=l2(l2_reg),
-               activation='relu')(x)
+               kernel_regularizer=l2(l2_reg))(x)
+    x = BatchNormalization()(x)
+    x = Activation("relu")(x)
     x = Conv2D(filters=512,
                kernel_size=(3, 3),
                padding="same",
-               kernel_regularizer=l2(l2_reg),
-               activation='relu')(x)
+               kernel_regularizer=l2(l2_reg))(x)
+    x = BatchNormalization()(x)
+    x = Activation("relu")(x)
     x = MaxPooling2D()(x)
 
     x = Conv2D(filters=4096,
                kernel_size=(7, 7),
                padding="valid",
-               kernel_regularizer=l2(l2_reg),
-               activation="relu")(x)
+               kernel_regularizer=l2(l2_reg))(x)
+    x = BatchNormalization()(x)
+    x = Activation("relu")(x)
     x = Dropout(0.5)(x)
     x = Conv2D(filters=4096,
                kernel_size=(1, 1),
                padding="valid",
-               kernel_regularizer=l2(l2_reg),
-               activation="relu")(x)
+               kernel_regularizer=l2(l2_reg))(x)
+    x = BatchNormalization()(x)
+    x = Activation("relu")(x)
     x = Dropout(0.5)(x)
 
     if nopad:
