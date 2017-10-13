@@ -51,6 +51,48 @@ def getFilelist(path, ext):
     return t
 
 
+def make_fcn_input(in_w, in_h, num_classes, dataset, resize_input, mode):
+    """
+    make input ant label data for fcn model,
+    in_w: int, input width of model
+    in_h: int, input height of model
+    num_classes: int,
+    dataset: str, "ips_1" etc
+    """
+    img_list, mask_list = load_datapath(dataset, mode="train")
+    DL = Patch_DataLoader(img_list, mask_list)
+
+    X = np.zeros((len(img_list), in_h, in_w, 3)).astype(np.float32)
+    y = np.zeros((len(img_list), in_h, in_w)) + num_classes
+    y = y.astype(np.int32)
+    n = 0
+    for im, ma in zip(img_list, mask_list):
+        im = Image.open(im)
+        ma = Image.open(ma)
+        if resize_input:
+            im = im.resize((in_w, in_h))
+            ma = ma.resize((in_w, in_h))
+        img = np.array(im, dtype=np.float32) / 255.
+        mask = np.array(ma, dtype=np.int32)
+        mask = DL.image2label(mask)
+        if in_h > img.shape[0]:
+            offset = (in_h - img.shape[0]) // 2
+            X[n, offset:offset + img.shape[0], :, :] = img[...]
+            y[n, offset:offset + mask.shape[0], :] = mask[...]
+        elif in_w > img.shape[1]:
+            offset = (in_w - img.shape[1]) // 2
+            X[n, :, offset:offset + img.shape[1], :] = img[...]
+            y[n, :, offset:offset + mask.shape[1]] = mask[...]
+        elif in_h == img.shape[0] and in_w == img.shape[1]:
+            X[n, ...] = img[...]
+            y[n, ...] = mask[...]
+        n += 1
+    y = y.reshape(
+        y.shape[0], y.shape[1], y.shape[2], 1
+    )
+    return X, y
+
+
 class Patch_DataLoader(object):
     label_d = {'ips': (0, 1, 2, 3), 'melanoma': (0, 1)}
     # in train phase
