@@ -94,7 +94,7 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
         arch = "FCN_8s"
         print("arch : ", arch)
         in_shape = (in_size, in_size, 3)
-        model = models.FCN_8s(num_classes, in_shape, l2_reg)
+        model = models.FCN_8s(num_classes, in_shape, l2_reg, nopad=True)
     else:
         print("arch :", arch)
         if arch == "vgg_p5":
@@ -142,13 +142,8 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
                          )
     else:
         # fcnはgeneratorで学習
-        X, y = DataLoader.load_data()
-        print("data loaded.")
-        del X, y
         steps_per_epoch = DataLoader.num_samples // batch_size
         if "ips" in dataset:
-            X, y = test_DL.load_data()
-            del X, y
             val_step = test_DL.num_samples // batch_size
             hist = model.fit_generator(
                 generator=fcn_generator(
@@ -162,7 +157,7 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
         else:
             hist = model.fit_generator(
                 generator=fcn_generator(
-                    in_size, size, step, dataset, batch_size, "train", 5),
+                    in_size, size, step, dataset, batch_size, "train", 8),
                 steps_per_epoch=steps_per_epoch,
                 epochs=epochs,
             )
@@ -324,35 +319,35 @@ def train_fcn_model(dataset, opt, lr, epochs, batch_size, l2_reg, decay,
 
 
 if __name__ == '__main__':
+    for i in range(1, 6):
+        K.clear_session()
+        dataset = "melanoma_" + str(i)
+        train_model(
+            method="fcn",
+            resolution=None,
+            dataset=dataset,
+            in_size=224,
+            size=50,
+            step=45,
+            arch="vgg_p5",
+            opt="Adam",
+            lr=1e-4,
+            epochs=15,
+            batch_size=16,
+            l2_reg=0,
+            decay=0
+        )
     # for i in range(1, 6):
     #     K.clear_session()
     #     dataset = "ips_" + str(i)
-    #     train_model(
-    #         method="fcn",
-    #         resolution=None,
+    #     train_fcn_model(
     #         dataset=dataset,
-    #         in_size=224,
-    #         size=150,
-    #         step=45,
-    #         arch="vgg_p5",
     #         opt="Adam",
     #         lr=1e-4,
-    #         epochs=15,
-    #         batch_size=8,
-    #         l2_reg=0,
-    #         decay=0
+    #         epochs=100,
+    #         batch_size=1,
+    #         l2_reg=1e-4,
+    #         decay=0,
+    #         img_size=(900, 1200),
+    #         resize_input=True
     #     )
-    for i in range(1, 6):
-        K.clear_session()
-        dataset = "ips_" + str(i)
-        train_fcn_model(
-            dataset=dataset,
-            opt="Adam",
-            lr=1e-4,
-            epochs=100,
-            batch_size=1,
-            l2_reg=0,
-            decay=0,
-            img_size=(900, 1200),
-            resize_input=True
-        )
