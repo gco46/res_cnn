@@ -45,10 +45,10 @@ step = 45
 resolution = [None]
 lr = 1e-4
 opt = "Adam"
-batch_size = 16
+batch_size = 8
 epochs = 15
 decay = 0
-l2_reg = 0
+l2_reg = 1e-4
 arch = "vgg_p4"
 
 for s in size:

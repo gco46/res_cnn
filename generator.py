@@ -6,7 +6,7 @@ import gc
 import os
 
 
-def fcn_generator(in_size, size, step, dataset, batch_size, mode, subsets=3,):
+def fcn_generator(in_size, size, step, dataset, batch_size, mode, subsets=3):
     """
     in_size: int,
     size: int,
