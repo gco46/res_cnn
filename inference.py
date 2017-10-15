@@ -39,7 +39,7 @@ def test_model(method, resolution, dataset, in_size, size, step,
             open(os.path.join(model_path, "train_arch.json")).read())
     except FileNotFoundError:
         in_shape = (in_size, in_size, 3)
-        model = models.FCN_8s(num_classes, in_shape, 0)
+        model = models.FCN_8s(num_classes, in_shape, 0, nopad=True)
     model.load_weights(os.path.join(model_path, "train_weights.h5"))
 
     # データ読み込み
@@ -212,22 +212,22 @@ def make_vis_dirs(model_path, resolution=None):
 
 
 if __name__ == '__main__':
-    # for i in range(1, 6):
-    #     dataset = "ips_" + str(i)
-    #     test_model(
-    #         method="regression",
-    #         resolution=[2],
-    #         dataset=dataset,
-    #         in_size=150,
-    #         size=150,
-    #         step=45,
-    #         model_path="ips/regression/Adam/vgg_p4_size150_res2-2"
-    #     )
-    for i in range(1, 6):
+    for i in range(1, 2):
         dataset = "ips_" + str(i)
-        test_fcn_model(
+        test_model(
+            method="fcn",
+            resolution=None,
             dataset=dataset,
-            img_size=(900, 1200),
-            resize_input=True,
+            in_size=224,
+            size=50,
+            step=45,
             model_path="valid"
         )
+    # for i in range(1, 6):
+    #     dataset = "ips_" + str(i)
+    #     test_fcn_model(
+    #         dataset=dataset,
+    #         img_size=(900, 1200),
+    #         resize_input=True,
+    #         model_path="ips/fcn_image/Adam/100epoch"
+    #     )
