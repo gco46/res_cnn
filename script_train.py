@@ -48,7 +48,7 @@ opt = "Adam"
 batch_size = 8
 epochs = 15
 decay = 0
-l2_reg = 1e-4
+l2_reg = 5e-5
 arch = "vgg_p4"
 
 for s in size:
