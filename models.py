@@ -13,13 +13,14 @@ from keras.initializers import Constant
 from keras.regularizers import l2
 from keras.engine.topology import Layer
 import keras.backend as K
+import tensorflow as tf
 import numpy as np
 from keras.utils import conv_utils
 from keras.engine.topology import Layer
 from keras.engine import InputSpec
 
 
-def bilinear_upsample_weights(factor, n_class, out_ch):
+def bilinear_upsample_weights(factor, n_class):
     if factor == "full":
         filter_size = 14
     else:
@@ -32,10 +33,11 @@ def bilinear_upsample_weights(factor, n_class, out_ch):
     og = np.ogrid[:filter_size, :filter_size]
     upsample_kernel = (1 - abs(og[0] - center) /
                        factor) * (1 - abs(og[1] - center) / factor)
-    weights = np.zeros((filter_size, filter_size, n_class, out_ch),
+    weights = np.zeros((filter_size, filter_size, n_class, n_class),
                        dtype=np.float32)
 
-    weights[:, :, :, :] = upsample_kernel[:, :, None, None]
+    for i in range(n_class):
+        weights[:, :, i, i] = upsample_kernel
     return weights
 
 
@@ -286,63 +288,68 @@ def FCN_8s_norm(classes, in_shape, l2_reg, nopad=False):
     x = Activation("relu")(x)
     x = Dropout(0.5)(x)
 
+    score_p5 = Conv2D(filters=classes,
+                      kernel_size=(1, 1),
+                      kernel_regularizer=l2(l2_reg),
+                      activation="relu")(x)
+
     if nopad:
-        p5 = Conv2DTranspose(filters=classes,
-                             kernel_size=(14, 14),
-                             strides=(1, 1),
-                             padding="valid",
-                             activation="linear",
-                             kernel_regularizer=l2(l2_reg),
-                             kernel_initializer=Constant(
-                                 bilinear_upsample_weights(
-                                     "full", classes, 4096)
-                             ))(x)
+        score_p5 = Conv2DTranspose(filters=classes,
+                                   kernel_size=(14, 14),
+                                   strides=(1, 1),
+                                   padding="valid",
+                                   activation="linear",
+                                   kernel_regularizer=l2(l2_reg),
+                                   kernel_initializer=Constant(
+                                       bilinear_upsample_weights(
+                                           "full", classes)
+                                   ))(score_p5)
     else:
-        p5 = Conv2DTranspose(filters=classes,
-                             kernel_size=(4, 4),
-                             strides=(2, 2),
-                             padding="same",
-                             activation="linear",
-                             kernel_regularizer=l2(l2_reg),
-                             kernel_initializer=Constant(
-                                 bilinear_upsample_weights(2, classes, 4096)
-                             ))(x)
+        score_p5 = Conv2DTranspose(filters=classes,
+                                   kernel_size=(4, 4),
+                                   strides=(2, 2),
+                                   padding="same",
+                                   activation="linear",
+                                   kernel_regularizer=l2(l2_reg),
+                                   kernel_initializer=Constant(
+                                       bilinear_upsample_weights(2, classes)
+                                   ))(score_p5)
 
     # pool3 のfeature mapを次元圧縮
-    p3 = Conv2D(filters=classes,
-                kernel_size=(1, 1),
-                kernel_regularizer=l2(l2_reg),
-                activation='relu')(p3)
+    score_p3 = Conv2D(filters=classes,
+                      kernel_size=(1, 1),
+                      kernel_regularizer=l2(l2_reg),
+                      activation='relu')(p3)
     # pool4のfeature mapを次元圧縮
-    p4 = Conv2D(filters=classes,
-                kernel_size=(1, 1),
-                kernel_regularizer=l2(l2_reg),
-                activation="relu")(p4)
+    score_p4 = Conv2D(filters=classes,
+                      kernel_size=(1, 1),
+                      kernel_regularizer=l2(l2_reg),
+                      activation="relu")(p4)
 
     # merge p4 and p5
-    p4 = CroppingLike2D(K.int_shape(p5))(p4)
-    p45 = Add()([p4, p5])
+    score_p4 = CroppingLike2D(K.int_shape(score_p5))(score_p4)
+    score_p45 = Add()([score_p4, score_p5])
 
     # p4+p5 を x2 upsampling
     if not nopad:
-        p45 = ZeroPadding2D(padding=(1, 1))(p45)
-    p45 = Conv2DTranspose(filters=classes,
-                          kernel_size=(4, 4),
-                          strides=(2, 2),
-                          padding="same",
-                          activation="linear",
-                          kernel_regularizer=l2(l2_reg),
-                          kernel_initializer=Constant(
-                              bilinear_upsample_weights(2, classes, classes)
-                          ))(p45)
+        score_p45 = ZeroPadding2D(padding=(1, 1))(score_p45)
+    score_p45 = Conv2DTranspose(filters=classes,
+                                kernel_size=(4, 4),
+                                strides=(2, 2),
+                                padding="same",
+                                activation="linear",
+                                kernel_regularizer=l2(l2_reg),
+                                kernel_initializer=Constant(
+                                    bilinear_upsample_weights(2, classes)
+                                ))(score_p45)
 
     # p3とp45をmerge
-    p3 = CroppingLike2D(K.int_shape(p45))(p3)
-    p345 = Add()([p3, p45])
+    score_p3 = CroppingLike2D(K.int_shape(score_p45))(score_p3)
+    score_p345 = Add()([score_p3, score_p45])
 
     # p3+p4+p5を x8 upsampling
     if not nopad:
-        p345 = ZeroPadding2D(padding=(1, 1))(p345)
+        score_p345 = ZeroPadding2D(padding=(1, 1))(score_p345)
     x = Conv2DTranspose(filters=classes,
                         kernel_size=(16, 16),
                         strides=(8, 8),
@@ -350,8 +357,8 @@ def FCN_8s_norm(classes, in_shape, l2_reg, nopad=False):
                         activation="linear",
                         kernel_regularizer=l2(l2_reg),
                         kernel_initializer=Constant(
-                            bilinear_upsample_weights(8, classes, classes)
-                        ))(p345)
+                            bilinear_upsample_weights(8, classes)
+                        ))(score_p345)
 
     x = CroppingLike2D(K.int_shape(inputs))(x)
     model = Model(inputs=inputs, outputs=x)
@@ -464,63 +471,68 @@ def FCN_8s(classes, in_shape, l2_reg, nopad=False):
     x = Activation("relu")(x)
     x = Dropout(0.5)(x)
 
+    score_p5 = Conv2D(filters=classes,
+                      kernel_size=(1, 1),
+                      kernel_regularizer=l2(l2_reg),
+                      activation="relu")(x)
+
     if nopad:
-        p5 = Conv2DTranspose(filters=classes,
-                             kernel_size=(14, 14),
-                             strides=(1, 1),
-                             padding="valid",
-                             activation="linear",
-                             kernel_regularizer=l2(l2_reg),
-                             kernel_initializer=Constant(
-                                 bilinear_upsample_weights(
-                                     "full", classes, 4096)
-                             ))(x)
+        score_p5 = Conv2DTranspose(filters=classes,
+                                   kernel_size=(14, 14),
+                                   strides=(1, 1),
+                                   padding="valid",
+                                   activation="linear",
+                                   kernel_regularizer=l2(l2_reg),
+                                   kernel_initializer=Constant(
+                                       bilinear_upsample_weights(
+                                           "full", classes)
+                                   ))(score_p5)
     else:
-        p5 = Conv2DTranspose(filters=classes,
-                             kernel_size=(4, 4),
-                             strides=(2, 2),
-                             padding="same",
-                             activation="linear",
-                             kernel_regularizer=l2(l2_reg),
-                             kernel_initializer=Constant(
-                                 bilinear_upsample_weights(2, classes, 4096)
-                             ))(x)
+        score_p5 = Conv2DTranspose(filters=classes,
+                                   kernel_size=(4, 4),
+                                   strides=(2, 2),
+                                   padding="same",
+                                   activation="linear",
+                                   kernel_regularizer=l2(l2_reg),
+                                   kernel_initializer=Constant(
+                                       bilinear_upsample_weights(2, classes)
+                                   ))(score_p5)
 
     # pool3 のfeature mapを次元圧縮
-    p3 = Conv2D(filters=classes,
-                kernel_size=(1, 1),
-                kernel_regularizer=l2(l2_reg),
-                activation='relu')(p3)
+    score_p3 = Conv2D(filters=classes,
+                      kernel_size=(1, 1),
+                      kernel_regularizer=l2(l2_reg),
+                      activation='relu')(p3)
     # pool4のfeature mapを次元圧縮
-    p4 = Conv2D(filters=classes,
-                kernel_size=(1, 1),
-                kernel_regularizer=l2(l2_reg),
-                activation="relu")(p4)
+    score_p4 = Conv2D(filters=classes,
+                      kernel_size=(1, 1),
+                      kernel_regularizer=l2(l2_reg),
+                      activation="relu")(p4)
 
     # merge p4 and p5
-    p4 = CroppingLike2D(K.int_shape(p5))(p4)
-    p45 = Add()([p4, p5])
+    score_p4 = CroppingLike2D(K.int_shape(score_p5))(score_p4)
+    score_p45 = Add()([score_p4, score_p5])
 
     # p4+p5 を x2 upsampling
     if not nopad:
-        p45 = ZeroPadding2D(padding=(1, 1))(p45)
-    p45 = Conv2DTranspose(filters=classes,
-                          kernel_size=(4, 4),
-                          strides=(2, 2),
-                          padding="same",
-                          activation="linear",
-                          kernel_regularizer=l2(l2_reg),
-                          kernel_initializer=Constant(
-                              bilinear_upsample_weights(2, classes, classes)
-                          ))(p45)
+        score_p45 = ZeroPadding2D(padding=(1, 1))(score_p45)
+    score_p45 = Conv2DTranspose(filters=classes,
+                                kernel_size=(4, 4),
+                                strides=(2, 2),
+                                padding="same",
+                                activation="linear",
+                                kernel_regularizer=l2(l2_reg),
+                                kernel_initializer=Constant(
+                                    bilinear_upsample_weights(2, classes)
+                                ))(score_p45)
 
     # p3とp45をmerge
-    p3 = CroppingLike2D(K.int_shape(p45))(p3)
-    p345 = Add()([p3, p45])
+    score_p3 = CroppingLike2D(K.int_shape(score_p45))(score_p3)
+    score_p345 = Add()([score_p3, score_p45])
 
     # p3+p4+p5を x8 upsampling
     if not nopad:
-        p345 = ZeroPadding2D(padding=(1, 1))(p345)
+        score_p345 = ZeroPadding2D(padding=(1, 1))(score_p345)
     x = Conv2DTranspose(filters=classes,
                         kernel_size=(16, 16),
                         strides=(8, 8),
@@ -528,8 +540,8 @@ def FCN_8s(classes, in_shape, l2_reg, nopad=False):
                         activation="linear",
                         kernel_regularizer=l2(l2_reg),
                         kernel_initializer=Constant(
-                            bilinear_upsample_weights(8, classes, classes)
-                        ))(p345)
+                            bilinear_upsample_weights(8, classes)
+                        ))(score_p345)
 
     x = CroppingLike2D(K.int_shape(inputs))(x)
     model = Model(inputs=inputs, outputs=x)
@@ -642,8 +654,7 @@ def softmax_sparse_crossentropy(y_true, y_pred):
     # y_predをベクトル化してsoftmaxかける(ピクセル毎に独立として扱う)
     # shape = (nb_samples, num_class)
     y_pred = K.reshape(y_pred, (-1, K.int_shape(y_pred)[-1]))
-    log_softmax = y_pred - K.logsumexp(y_pred, axis=1, keepdims=True)
-    # log_softmax = tf.nn.log_softmax(y_pred)
+    log_softmax = tf.nn.log_softmax(y_pred)
 
     # y_trueをベクトル化、ignore labelを含めたone-hot表現に直す
     # shape = (nb_samples, num_class + 1)
