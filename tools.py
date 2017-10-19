@@ -112,7 +112,7 @@ class Patch_DataLoader(object):
                  method=None,
                  resolution=None,
                  mode="train",
-                 threshold=0.8):
+                 threshold=0.2):
         """
         img_list: list, image path list, path is str
         mask_list: list,
@@ -361,14 +361,14 @@ class Patch_DataLoader(object):
         if self.datatype == 'ips':
             # ips dataset
             # others が パッチの大部分を占めていた場合、そのパッチはTraining には使わない
-            # n = int(m_patch.size * self.threshold)
-            # if hist[-1] > n and self.mode == "train":
-            #     return False
+            n = int(m_patch.size * self.threshold)
+            if hist[-1] > n and self.mode == "train":
+                return False
 
             # 中心ピクセルがothersだった場合、Trainingには使わない
-            h, w = m_patch.shape
-            if m_patch[h // 2, w // 2] == 3 and self.mode == "train":
-                return False
+            # h, w = m_patch.shape
+            # if m_patch[h // 2, w // 2] == 3 and self.mode == "train":
+            #     return False
 
         for res_int in self.res:
             # resolution を一つずつみてtarget histogramをつくる
