@@ -321,13 +321,13 @@ def train_fcn_model(dataset, opt, lr, epochs, batch_size, l2_reg, decay,
 if __name__ == '__main__':
     for i in range(1, 6):
         K.clear_session()
-        dataset = "melanoma_" + str(i)
+        dataset = "ips_" + str(i)
         train_model(
             method="fcn",
             resolution=None,
             dataset=dataset,
             in_size=224,
-            size=50,
+            size=150,
             step=45,
             arch="vgg_p5",
             opt="Adam",
