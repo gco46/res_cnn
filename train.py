@@ -41,7 +41,7 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
 
     output: None
     """
-    if not method in ['regression', 'classification', 'fcn']:
+    if not method in ['regression', 'classification', 'fcn', 'fcn_norm']:
         raise ValueError()
 
     # データセットによるクラス数指定
@@ -77,6 +77,28 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
         pass
     dir_path = os.path.join("weights/valid_all/dataset_" + str(n))
 
+    # モデル読み込み
+    if method == "fcn":
+        arch = "FCN_8s"
+        print("arch : ", arch)
+        in_shape = (in_size, in_size, 3)
+        model = models.FCN_8s(num_classes, in_shape, l2_reg, nopad=True)
+    elif method == "fcn_norm":
+        arch = "FCN_8s_norm"
+        print("arch : ", arch)
+        in_shape = (in_size, in_size, 3)
+        model = models.FCN_8s_norm(num_classes, in_shape, l2_reg, nopad=True)
+        # 今後の操作のためmethodを上書き
+        method = "fcn"
+    else:
+        print("arch :", arch)
+        if arch == "vgg_p5":
+            model = models.myVGG_p5(in_size, l2_reg, method, out_num)
+        elif arch == "vgg_p4":
+            model = models.myVGG_p4(in_size, l2_reg, method, out_num)
+        else:
+            raise ValueError("unknown arch")
+
     # データのパス読み込み
     img_list, mask_list = tl.load_datapath(dataset, mode="train")
     test_img_list, test_mask_list = tl.load_datapath(dataset, mode="test")
@@ -88,21 +110,6 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
     test_DL = Patch_DataLoader(
         test_img_list, test_mask_list, in_size, size, step, method, resolution
     )
-
-    # モデル読み込み
-    if method == "fcn":
-        arch = "FCN_8s"
-        print("arch : ", arch)
-        in_shape = (in_size, in_size, 3)
-        model = models.FCN_8s(num_classes, in_shape, l2_reg, nopad=True)
-    else:
-        print("arch :", arch)
-        if arch == "vgg_p5":
-            model = models.myVGG_p5(in_size, l2_reg, method, out_num)
-        elif arch == "vgg_p4":
-            model = models.myVGG_p4(in_size, l2_reg, method, out_num)
-        else:
-            raise ValueError("unknown arch")
 
     # optimizer指定、モデルコンパイル
     if opt == "SGD":
@@ -321,13 +328,13 @@ def train_fcn_model(dataset, opt, lr, epochs, batch_size, l2_reg, decay,
 if __name__ == '__main__':
     for i in range(1, 6):
         K.clear_session()
-        dataset = "melanoma_" + str(i)
+        dataset = "ips_" + str(i)
         train_model(
             method="fcn",
             resolution=None,
             dataset=dataset,
             in_size=224,
-            size=50,
+            size=150,
             step=45,
             arch="vgg_p5",
             opt="Adam",

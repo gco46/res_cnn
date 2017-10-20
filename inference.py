@@ -22,6 +22,9 @@ def test_model(method, resolution, dataset, in_size, size, step,
     step: int,
     model_path: str, path to model path you want to test
     """
+    if not method in ['regression', 'classification', 'fcn', 'fcn_norm']:
+        raise ValueError()
+
     if method != "regression":
         resolution = None
 
@@ -39,7 +42,10 @@ def test_model(method, resolution, dataset, in_size, size, step,
             open(os.path.join(model_path, "train_arch.json")).read())
     except FileNotFoundError:
         in_shape = (in_size, in_size, 3)
-        model = models.FCN_8s(num_classes, in_shape, 0, nopad=True)
+        if method == "fcn":
+            model = models.FCN_8s(num_classes, in_shape, 0, nopad=True)
+        elif method == "fcn_norm":
+            model = models.FCN_8s_norm(num_classes, in_shape, 0, nopad=True)
     model.load_weights(os.path.join(model_path, "train_weights.h5"))
 
     # データ読み込み
@@ -219,7 +225,7 @@ if __name__ == '__main__':
             resolution=None,
             dataset=dataset,
             in_size=224,
-            size=50,
+            size=150,
             step=45,
             model_path="valid"
         )
@@ -229,5 +235,5 @@ if __name__ == '__main__':
     #         dataset=dataset,
     #         img_size=(900, 1200),
     #         resize_input=True,
-    #         model_path="ips/fcn_image/Adam/100epoch"
+    #         model_path="valid"
     #     )
