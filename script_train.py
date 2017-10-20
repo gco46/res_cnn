@@ -40,7 +40,7 @@ def make_model_name(arch, size, res, fcn=False):
 data = "ips"
 
 in_size = 224
-size = [150, 300]
+size = [150, 100]
 step = 45
 resolution = [None]
 lr = 1e-4
