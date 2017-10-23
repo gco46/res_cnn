@@ -59,7 +59,7 @@ def make_fcn_input(in_w, in_h, num_classes, dataset, resize_input, mode):
     num_classes: int,
     dataset: str, "ips_1" etc
     """
-    img_list, mask_list = load_datapath(dataset, mode="train")
+    img_list, mask_list = load_datapath(dataset, mode=mode)
     DL = Patch_DataLoader(img_list, mask_list)
 
     X = np.zeros((len(img_list), in_h, in_w, 3)).astype(np.float32)
