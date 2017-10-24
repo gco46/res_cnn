@@ -344,13 +344,13 @@ if __name__ == '__main__':
     #         l2_reg=0,
     #         decay=0
     #     )
-    for i in range(1, 6):
+    for i in range(4, 6):
         K.clear_session()
         dataset = "ips_" + str(i)
         train_fcn_model(
             dataset=dataset,
             opt="Adam",
-            lr=1e-4,
+            lr=1e-5,
             epochs=100,
             batch_size=1,
             l2_reg=5e-5,
