@@ -164,7 +164,7 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
         else:
             hist = model.fit_generator(
                 generator=fcn_generator(
-                    in_size, size, step, dataset, batch_size, "train", 8),
+                    in_size, size, step, dataset, batch_size, "train", 10),
                 steps_per_epoch=steps_per_epoch,
                 epochs=epochs,
             )
@@ -312,11 +312,13 @@ def train_fcn_model(dataset, opt, lr, epochs, batch_size, l2_reg, decay,
 
     # train loss だけプロットして保存
     loss = hist.history["loss"]
-    val_loss = hist.history["val_loss"]
+    if "ips" in dataset:
+        val_loss = hist.history["val_loss"]
     nb_epoch = len(loss)
     plt.figure()
     plt.plot(range(nb_epoch), loss, label="loss")
-    plt.plot(range(nb_epoch), val_loss, label="val_loss")
+    if "ips" in dataset:
+        plt.plot(range(nb_epoch), val_loss, label="val_loss")
     plt.legend(loc='best', fontsize=10)
     plt.grid()
     plt.xlabel("epoch")
