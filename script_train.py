@@ -37,11 +37,11 @@ def make_model_name(arch, size, res, fcn=False):
     return model_name
 
 
-data = "ips"
+data = "melanoma"
 
 in_size = 224
-size = [150, 100]
-step = 45
+size = [150, 300]
+step = 35
 resolution = [None]
 lr = 1e-4
 opt = "Adam"
