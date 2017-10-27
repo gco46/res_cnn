@@ -362,27 +362,6 @@ def train_fcn_model(dataset, opt, lr, epochs, batch_size, l2_reg, decay,
 
 
 if __name__ == '__main__':
-<<<<<<< HEAD
-=======
-    for i in range(1, 6):
-        K.clear_session()
-        dataset = "ips_" + str(i)
-        train_model(
-            method="ce_dist",
-            resolution=[2],
-            dataset=dataset,
-            in_size=100,
-            size=100,
-            step=100,
-            arch="vgg_p4",
-            opt="Adam",
-            lr=1e-4,
-            epochs=15,
-            batch_size=16,
-            l2_reg=0,
-            decay=0
-        )
->>>>>>> learn_dist
     # for i in range(1, 6):
     #     K.clear_session()
     #     dataset = "ips_" + str(i)
