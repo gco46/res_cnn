@@ -5,9 +5,9 @@ import tools as tl
 import models
 from generator import fcn_generator
 from models import softmax_sparse_crossentropy, sparse_accuracy
+from models import distribution_cross_entropy
 from keras.utils import np_utils
 from keras.optimizers import SGD, Adam
-from keras.models import model_from_json
 import keras.backend as K
 
 import matplotlib as mpl
@@ -15,8 +15,6 @@ mpl.use("Agg")
 import matplotlib.pyplot as plt
 import os
 import timeit
-from PIL import Image
-import numpy as np
 
 
 def train_model(method, resolution, dataset, in_size, size, step, arch,
@@ -41,7 +39,7 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
 
     output: None
     """
-    if not method in ['regression', 'classification', 'fcn', 'fcn_norm']:
+    if method not in ['regression', 'classification', 'fcn', 'fcn_norm', 'ce_dist']:
         raise ValueError()
 
     # データセットによるクラス数指定
@@ -53,7 +51,7 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
         raise ValueError("dataset must be ips or melanoma")
 
     # ネットワークの出力ユニット数指定
-    if method != 'regression':
+    if method != 'regression' and method != 'ce_dist':
         if method == "classification":
             metrics = "accuracy"
             loss_f = "categorical_crossentropy"
@@ -66,8 +64,12 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
         out_num = 0
         for i in resolution:
             out_num += i**2 * num_classes
-        metrics = "mse"
-        loss_f = "mean_squared_error"
+        if method == 'regression':
+            metrics = "mse"
+            loss_f = "mean_squared_error"
+        else:
+            metrics = distribution_cross_entropy
+            loss_f = distribution_cross_entropy
 
     # weights ディレクトリ作成
     try:
@@ -112,25 +114,47 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
     )
 
     # optimizer指定、モデルコンパイル
-    if opt == "SGD":
-        model.compile(loss=loss_f,
-                      optimizer=SGD(lr=lr, momentum=0.9, decay=decay),
-                      metrics=[metrics]
-                      )
-    elif opt == "Adadelta":
-        lr = 1.0
-        decay = 0
-        model.compile(loss=loss_f,
-                      optimizer=Adadelta(),
-                      metrics=[metrics]
-                      )
-    elif opt == "Adam":
-        model.compile(loss=loss_f,
-                      optimizer=Adam(lr=lr, decay=decay),
-                      metrics=[metrics]
-                      )
+    # loss関数が引数をとる場合と場合分け
+    if method != "ce_dist":
+        if opt == "SGD":
+            model.compile(loss=loss_f,
+                          optimizer=SGD(lr=lr, momentum=0.9, decay=decay),
+                          metrics=[metrics]
+                          )
+        elif opt == "Adadelta":
+            lr = 1.0
+            decay = 0
+            model.compile(loss=loss_f,
+                          optimizer=Adadelta(),
+                          metrics=[metrics]
+                          )
+        elif opt == "Adam":
+            model.compile(loss=loss_f,
+                          optimizer=Adam(lr=lr, decay=decay),
+                          metrics=[metrics]
+                          )
+        else:
+            raise ValueError("argument 'opt' is wrong.")
     else:
-        raise ValueError("argument 'opt' is wrong.")
+        if opt == "SGD":
+            model.compile(loss=loss_f(resolution[0]),
+                          optimizer=SGD(lr=lr, momentum=0.9, decay=decay),
+                          metrics=[metrics(resolution[0])]
+                          )
+        elif opt == "Adadelta":
+            lr = 1.0
+            decay = 0
+            model.compile(loss=loss_f(resolution[0]),
+                          optimizer=Adadelta(),
+                          metrics=[metrics(resolution[0])]
+                          )
+        elif opt == "Adam":
+            model.compile(loss=loss_f(resolution[0]),
+                          optimizer=Adam(lr=lr, decay=decay),
+                          metrics=[metrics(resolution[0])]
+                          )
+        else:
+            raise ValueError("argument 'opt' is wrong.")
 
     print("train on " + dataset)
     start_time = timeit.default_timer()
@@ -142,11 +166,19 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
         X_train /= 255.
         if method == "classification":
             y_train = np_utils.to_categorical(y_train, num_classes=num_classes)
-        hist = model.fit(X_train, y_train,
-                         batch_size=batch_size,
-                         epochs=epochs,
-                         verbose=1,
-                         )
+        if "ips" in dataset:
+            X_test, y_test = test_DL.load_data()
+            X_test = X_test.reshape(X_test.shape[0], in_size, in_size, 3)
+            X_test /= 255.
+            if method == "classification":
+                y_test = np_utils.to_categorical(
+                    y_test, num_classes=num_classes)
+            hist = model.fit(X_train, y_train,
+                             batch_size=batch_size,
+                             epochs=epochs,
+                             validation_data=(X_test, y_test),
+                             verbose=1,
+                             )
     else:
         # fcnはgeneratorで学習
         steps_per_epoch = DataLoader.num_samples // batch_size
@@ -330,13 +362,13 @@ if __name__ == '__main__':
         K.clear_session()
         dataset = "ips_" + str(i)
         train_model(
-            method="fcn",
-            resolution=None,
+            method="ce_dist",
+            resolution=[2],
             dataset=dataset,
-            in_size=224,
-            size=150,
-            step=45,
-            arch="vgg_p5",
+            in_size=100,
+            size=100,
+            step=100,
+            arch="vgg_p4",
             opt="Adam",
             lr=1e-4,
             epochs=15,

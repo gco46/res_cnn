@@ -95,6 +95,7 @@ def make_fcn_input(in_w, in_h, num_classes, dataset, resize_input, mode):
 
 class Patch_DataLoader(object):
     label_d = {'ips': (0, 1, 2, 3), 'melanoma': (0, 1)}
+    dist_method = ["regression", "ce_dist"]
     # in train phase
     # ips: good -> 0, bad -> 1, bgd -> 2, others -> 3
     # melanoma: background -> 0, tumor -> 1
@@ -295,7 +296,7 @@ class Patch_DataLoader(object):
                 target vector or one class label (in classification)
                 return False if patch is filled by 'others' label
         """
-        if self.method == "regression":
+        if self.method in self.dist_method:
             target = self.calcRegTarget(m_patch)
         elif self.method == "classification":
             h, w = m_patch.shape
@@ -401,15 +402,23 @@ class Patch_DataLoader(object):
                 hist = self.class_label_hist(patch)
                 if self.datatype == "ips":
                     # ips dataset
+                    # method によって場合分け
                     # others のラベルを省いてヒストグラムを作る
                     n = int(patch.size * self.threshold)
                     if hist[-1] > n:
                         # othersが多ければ0とする
                         result.append([0., 0., 0.])
                         continue
-                    # histogram 正規化
-                    hist = hist[:-1] / np.sum(hist[:-1])
-                    result.append(hist)
+                    if self.method == "regression" or self.method == "ce_dist":
+                        # histogram 正規化
+                        hist = hist[:-1] / np.sum(hist[:-1])
+                        result.append(hist)
+                    # elif self.method == "ce_dist":
+                    #     c_label = patch[local_size_h // 2, local_size_w // 2]
+                    #     tmp = [0, 0, 0]
+                    #     if c_label != 3:
+                    #         tmp[c_label] = 1
+                    #     result.append(tmp)
                 else:
                     # melanoma dataset
                     # histogram 正規化
