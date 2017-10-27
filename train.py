@@ -164,7 +164,7 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
         else:
             hist = model.fit_generator(
                 generator=fcn_generator(
-                    in_size, size, step, dataset, batch_size, "train", 8),
+                    in_size, size, step, dataset, batch_size, "train", 10),
                 steps_per_epoch=steps_per_epoch,
                 epochs=epochs,
             )
@@ -200,11 +200,13 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
 
     # train loss だけプロットして保存
     loss = hist.history["loss"]
-    val_loss = hist.history["val_loss"]
+    if "ips" in dataset:
+        val_loss = hist.history["val_loss"]
     nb_epoch = len(loss)
     plt.figure()
     plt.plot(range(nb_epoch), loss, label="loss")
-    plt.plot(range(nb_epoch), val_loss, label="val_loss")
+    if "ips" in dataset:
+        plt.plot(range(nb_epoch), val_loss, label="val_loss")
     plt.legend(loc='best', fontsize=10)
     plt.grid()
     plt.xlabel("epoch")
@@ -312,11 +314,13 @@ def train_fcn_model(dataset, opt, lr, epochs, batch_size, l2_reg, decay,
 
     # train loss だけプロットして保存
     loss = hist.history["loss"]
-    val_loss = hist.history["val_loss"]
+    if "ips" in dataset:
+        val_loss = hist.history["val_loss"]
     nb_epoch = len(loss)
     plt.figure()
     plt.plot(range(nb_epoch), loss, label="loss")
-    plt.plot(range(nb_epoch), val_loss, label="val_loss")
+    if "ips" in dataset:
+        plt.plot(range(nb_epoch), val_loss, label="val_loss")
     plt.legend(loc='best', fontsize=10)
     plt.grid()
     plt.xlabel("epoch")
@@ -326,35 +330,35 @@ def train_fcn_model(dataset, opt, lr, epochs, batch_size, l2_reg, decay,
 
 
 if __name__ == '__main__':
-    for i in range(1, 6):
-        K.clear_session()
-        dataset = "ips_" + str(i)
-        train_model(
-            method="fcn",
-            resolution=None,
-            dataset=dataset,
-            in_size=224,
-            size=150,
-            step=45,
-            arch="vgg_p5",
-            opt="Adam",
-            lr=1e-4,
-            epochs=15,
-            batch_size=16,
-            l2_reg=0,
-            decay=0
-        )
     # for i in range(1, 6):
     #     K.clear_session()
     #     dataset = "ips_" + str(i)
-    #     train_fcn_model(
+    #     train_model(
+    #         method="fcn",
+    #         resolution=None,
     #         dataset=dataset,
+    #         in_size=224,
+    #         size=150,
+    #         step=45,
+    #         arch="vgg_p5",
     #         opt="Adam",
     #         lr=1e-4,
-    #         epochs=100,
-    #         batch_size=1,
-    #         l2_reg=1e-4,
-    #         decay=0,
-    #         img_size=(900, 1200),
-    #         resize_input=True
+    #         epochs=15,
+    #         batch_size=16,
+    #         l2_reg=0,
+    #         decay=0
     #     )
+    for i in range(4, 6):
+        K.clear_session()
+        dataset = "ips_" + str(i)
+        train_fcn_model(
+            dataset=dataset,
+            opt="Adam",
+            lr=1e-5,
+            epochs=100,
+            batch_size=1,
+            l2_reg=5e-5,
+            decay=0,
+            img_size=(900, 1200),
+            resize_input=True
+        )
