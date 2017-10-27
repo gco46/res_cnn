@@ -44,7 +44,7 @@ def bilinear_upsample_weights(factor, n_class):
 def myVGG_p4(size, l2_reg, method, out_num):
     if method == "classification":
         out_act = "softmax"
-    elif method == "regression":
+    else:
         out_act = "linear"
     model = Sequential()
     model.add(ZeroPadding2D((1, 1), input_shape=(size, size, 3)))
@@ -102,7 +102,7 @@ def myVGG_p5(size, l2_reg, method, out_num):
     """
     if method == "classification":
         out_act = "softmax"
-    elif method == "regression":
+    else:
         out_act = "linear"
     model = Sequential()
     model.add(ZeroPadding2D((1, 1), input_shape=(size, size, 3)))
@@ -597,11 +597,13 @@ class CroppingLike2D(Layer):
                                int((input_width - target_width) / 2)]
 
             if self.offset[0] + target_height > input_height:
-                raise ValueError('Height index out of range: '
-                                 + str(self.offset[0] + target_height))
+                raise ValueError('Height index out of range: ' +
+                                 str(self.offset[0] + target_height)
+                                 )
             if self.offset[1] + target_width > input_width:
-                raise ValueError('Width index out of range:'
-                                 + str(self.offset[1] + target_width))
+                raise ValueError('Width index out of range:' +
+                                 str(self.offset[1] + target_width)
+                                 )
 
             return inputs[:,
                           :,
@@ -621,11 +623,11 @@ class CroppingLike2D(Layer):
                                int((input_width - target_width) / 2)]
 
             if self.offset[0] + target_height > input_height:
-                raise ValueError('Height index out of range: '
-                                 + str(self.offset[0] + target_height))
+                raise ValueError('Height index out of range: ' +
+                                 str(self.offset[0] + target_height))
             if self.offset[1] + target_width > input_width:
-                raise ValueError('Width index out of range:'
-                                 + str(self.offset[1] + target_width))
+                raise ValueError('Width index out of range:' +
+                                 str(self.offset[1] + target_width))
             output = inputs[:,
                             self.offset[0]:self.offset[0] + target_height,
                             self.offset[1]:self.offset[1] + target_width,
@@ -702,3 +704,39 @@ def sparse_accuracy(y_true, y_pred):
     # return K.sum(tf.to_float(legal_labels & K.equal(K.argmax(y_true,
     # axis=-1), K.argmax(y_pred, axis=-1)))) /
     # K.sum(tf.to_float(legal_labels))
+
+
+def distribution_cross_entropy(resolution):
+    """
+    loss function for distribution cross entropy
+    resolution: int, the resolution of patch
+    """
+    def loss(y_true, y_pred):
+        nb_classes = K.int_shape(y_pred)[-1] // resolution**2
+        y_true = K.reshape(y_true, (-1, nb_classes))
+        y_true = K.argmax(y_true, axis=-1)
+        y_true = K.one_hot(y_true, nb_classes)
+
+        y_pred = K.reshape(y_pred, (-1, nb_classes))
+        log_softmax = tf.nn.log_softmax(y_pred)
+        cross_entropy = -K.sum(y_true * log_softmax, axis=1)
+        cross_entropy = K.mean(cross_entropy)
+        return cross_entropy
+    return loss
+
+
+# def distribution_binary(resolution):
+#     def loss(y_true, y_pred):
+#         nb_classes = K.int_shape(y_pred)[-1] // resolution**2
+#         y_true = K.reshape(y_true, (-1, nb_classes))
+#         y_true = K.argmax(y_true, axis=-1)
+#         y_true = K.one_hot(y_true, nb_classes)
+
+#         y_pred = K.reshape(y_pred, (-1, nb_classes))
+#         # y_pred = K.argmax(y_pred, axis=-1)
+#         # y_pred = K.one_hot(y_pred, nb_classes)
+
+#         bi_loss = K.mean(K.square(y_true), axis=-1)
+#         bi_loss = K.mean(bi_loss)
+#         return bi_loss
+#     return loss
