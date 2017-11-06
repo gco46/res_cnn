@@ -49,6 +49,9 @@ def fcn_generator(in_size, size, step, dataset, batch_size, mode, subsets=3):
                 x = X_train[j * batch_size: (j + 1) * batch_size, ...]
                 y = y_train[j * batch_size: (j + 1) * batch_size, ...]
                 yield x, y
+                del x
+                del y
+                gc.collect()
             del X_train
             del y_train
             gc.collect()
