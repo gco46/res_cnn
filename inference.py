@@ -218,22 +218,22 @@ def make_vis_dirs(model_path, resolution=None):
 
 
 if __name__ == '__main__':
-    for i in range(1, 2):
-        dataset = "melanoma_" + str(i)
+    for i in range(1, 6):
+        dataset = "ips_" + str(i)
         test_model(
-            method="fcn",
+            method="classification",
             resolution=None,
             dataset=dataset,
-            in_size=224,
-            size=150,
-            step=35,
-            model_path="valid"
+            in_size=150,
+            size=100,
+            step=5,
+            model_path="ips/classification/Adam/l2=5e-5/vgg_p4_size100_center"
         )
     # for i in range(1, 6):
-    #     dataset = "ips_" + str(i)
+    #     dataset = "melanoma_" + str(i)
     #     test_fcn_model(
     #         dataset=dataset,
-    #         img_size=(900, 1200),
-    #         resize_input=True,
+    #         img_size=(1000, 1000),
+    #         resize_input=False,
     #         model_path="valid"
     #     )

@@ -37,12 +37,12 @@ def make_model_name(arch, size, res, fcn=False):
     return model_name
 
 
-data = "melanoma"
+data = "ips"
 
-in_size = 224
-size = [300]
-step = 35
-resolution = [None]
+in_size = 150
+size = [50, 100, 150, 300]
+step = 45
+resolution = [[1], [5], [1, 2, 5]]
 lr = 1e-4
 opt = "Adam"
 batch_size = 16
@@ -54,12 +54,12 @@ arch = "vgg_p4"
 for s in size:
     for r in resolution:
         if r is None:
-            method = "fcn"
+            method = "classification"
         else:
             method = "regression"
         for i in range(1, 6):
             K.clear_session()
-            model_name = make_model_name(arch, s, r, fcn=True)
+            model_name = make_model_name(arch, s, r, fcn=False)
             mpath = osp.join(data, method, opt, model_name)
             dataset = data + "_" + str(i)
 

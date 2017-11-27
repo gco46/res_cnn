@@ -316,7 +316,7 @@ def train_fcn_model(dataset, opt, lr, epochs, batch_size, l2_reg, decay,
     hist = model.fit(X_train, y_train,
                      batch_size=batch_size,
                      epochs=epochs,
-                     validation_data=(X_test, y_test),
+                     #  validation_data=(X_test, y_test),
                      verbose=1)
     elapsed_time = (timeit.default_timer() - start_time) / 60.
     print("train on %s takes %.2f m" % (dataset, elapsed_time))
@@ -380,17 +380,17 @@ if __name__ == '__main__':
     #         l2_reg=0,
     #         decay=0
     #     )
-    for i in range(4, 6):
+    for i in range(5, 6):
         K.clear_session()
-        dataset = "ips_" + str(i)
+        dataset = "melanoma_" + str(i)
         train_fcn_model(
             dataset=dataset,
             opt="Adam",
             lr=1e-5,
-            epochs=100,
+            epochs=50,
             batch_size=1,
             l2_reg=5e-5,
             decay=0,
-            img_size=(900, 1200),
-            resize_input=True
+            img_size=(1000, 1000),
+            resize_input=False
         )
