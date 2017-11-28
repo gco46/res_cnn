@@ -395,7 +395,7 @@ if __name__ == '__main__':
             arch="vgg_p5",
             opt="Adam",
             lr=1e-4,
-            epochs=1,
+            epochs=15,
             batch_size=16,
             l2_reg=5e-5,
             decay=0
