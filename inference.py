@@ -22,10 +22,10 @@ def test_model(method, resolution, dataset, in_size, size, step,
     step: int,
     model_path: str, path to model path you want to test
     """
-    if not method in ['regression', 'classification', 'fcn', 'fcn_norm']:
+    if not method in ['regression', 'classification', 'fcn', 'fcn_norm', 'fcn_dist']:
         raise ValueError()
 
-    if method != "regression":
+    if method not in ["regression", "fcn_dist"]:
         resolution = None
 
     if 'ips' in dataset:
@@ -46,6 +46,12 @@ def test_model(method, resolution, dataset, in_size, size, step,
             model = models.FCN_8s(num_classes, in_shape, 0, nopad=True)
         elif method == "fcn_norm":
             model = models.FCN_8s_norm(num_classes, in_shape, 0, nopad=True)
+        else:
+            out_num = 0
+            for i in resolution:
+                out_num += i**2 * num_classes
+            model = models.FCN_8s_dist(
+                num_classes, in_shape, 0, out_num, nopad=True)
     model.load_weights(os.path.join(model_path, "train_weights.h5"))
 
     # データ読み込み
@@ -77,6 +83,8 @@ def test_model(method, resolution, dataset, in_size, size, step,
         # 推定
         # start_time = timeit.default_timer()
         prob = model.predict(patches, batch_size=16)
+        if isinstance(prob, list):
+            prob = prob[0]
         # elapsed_time += timeit.default_timer() - start_time
         PMC = ProbMapConstructer(
             model_out=prob,
@@ -218,16 +226,16 @@ def make_vis_dirs(model_path, resolution=None):
 
 
 if __name__ == '__main__':
-    for i in range(1, 6):
+    for i in range(1, 2):
         dataset = "ips_" + str(i)
         test_model(
-            method="classification",
-            resolution=None,
+            method="fcn_dist",
+            resolution=[5],
             dataset=dataset,
-            in_size=150,
-            size=100,
-            step=5,
-            model_path="ips/classification/Adam/l2=5e-5/vgg_p4_size100_center"
+            in_size=224,
+            size=150,
+            step=45,
+            model_path="valid"
         )
     # for i in range(1, 6):
     #     dataset = "melanoma_" + str(i)

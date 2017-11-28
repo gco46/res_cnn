@@ -6,7 +6,8 @@ import gc
 import os
 
 
-def fcn_generator(in_size, size, step, dataset, batch_size, mode, subsets=3):
+def fcn_generator(in_size, size, step, dataset, batch_size, mode,
+                  resolution, subsets=3):
     """
     in_size: int,
     size: int,
@@ -35,34 +36,54 @@ def fcn_generator(in_size, size, step, dataset, batch_size, mode, subsets=3):
             mask_subset = np.array(mask_list)[bool_mask]
             img_subset = img_subset.tolist()
             mask_subset = mask_subset.tolist()
-            DataLoader = Patch_DataLoader(
-                img_subset, mask_subset, in_size, size, step, "fcn", None
-            )
-            X_train, y_train = DataLoader.load_data()
-            X_train, y_train = shuffle_samples(X_train, y_train)
-            X_train = X_train.reshape(X_train.shape[0], in_size, in_size, 3)
-            X_train /= 255.
-            y_train = y_train.reshape(y_train.shape[0], in_size, in_size, 1)
-            y_train = y_train.astype(np.int32)
+            if resolution is None:
+                DataLoader = Patch_DataLoader(
+                    img_subset, mask_subset, in_size, size, step, "fcn", None
+                )
+                X_train, y_train = DataLoader.load_data()
+                X_train, y_train = shuffle_samples(X_train, y_train)
+                X_train = X_train.reshape(
+                    X_train.shape[0], in_size, in_size, 3)
+                X_train /= 255.
+                y_train = y_train.reshape(
+                    y_train.shape[0], in_size, in_size, 1)
+                y_train = y_train.astype(np.int32)
+            else:
+                DataLoader = Patch_DataLoader(
+                    img_subset, mask_subset, in_size, size, step, "fcn_dist",
+                    resolution
+                )
+                X_train, y_fcn, y_dist = DataLoader.load_data_two_target()
+                X_train, y_fcn, y_dist = shuffle_samples(
+                    X_train, y_fcn, y_dist)
+                X_train = X_train.reshape(
+                    X_train.shape[0], in_size, in_size, 3)
+                X_train /= 255.
+                y_fcn = y_fcn.reshape(y_fcn.shape[0], in_size, in_size, 1)
+                y_fcn = y_fcn.astype(np.int32)
             batch_loop = X_train.shape[0] // batch_size
             for j in range(batch_loop):     # batch loop
                 x = X_train[j * batch_size: (j + 1) * batch_size, ...]
-                y = y_train[j * batch_size: (j + 1) * batch_size, ...]
-                yield x, y
-                del x
-                del y
+                if resolution is None:
+                    y = y_train[j * batch_size: (j + 1) * batch_size, ...]
+                    yield x, y
+                    # del x, y
+                else:
+                    y1 = y_fcn[j * batch_size: (j + 1) * batch_size, ...]
+                    y2 = y_dist[j * batch_size: (j + 1) * batch_size, ...]
+                    yield x, [y1, y2]
+                    # del x, y1, y2
                 gc.collect()
-            del X_train
-            del y_train
-            gc.collect()
+            # del X_train
+            # del y_train
+            # gc.collect()
 
 
-def shuffle_samples(X, y):
-    order = np.arange(X.shape[0])
-    np.random.shuffle(order)
-    X_result = np.zeros(X.shape)
-    y_result = np.zeros(y.shape)
-    for i in range(X.shape[0]):
-        X_result[i, ...] = X[order[i], ...]
-        y_result[i, ...] = y[order[i], ...]
-    return X_result, y_result
+def shuffle_samples(*args):
+    zipped = list(zip(*args))
+    np.random.shuffle(zipped)
+    shuffled = list(zip(*zipped))
+    result = []
+    for ar in shuffled:
+        result.append(np.asarray(ar))
+    return result

@@ -39,7 +39,9 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
 
     output: None
     """
-    if method not in ['regression', 'classification', 'fcn', 'fcn_norm', 'ce_dist']:
+    m_list = ['regression', 'classification', 'fcn',
+              'fcn_norm', 'ce_dist', 'fcn_dist']
+    if method not in m_list:
         raise ValueError()
 
     # データセットによるクラス数指定
@@ -51,7 +53,7 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
         raise ValueError("dataset must be ips or melanoma")
 
     # ネットワークの出力ユニット数指定
-    if method != 'regression' and method != 'ce_dist':
+    if method not in ["regression", "ce_dist", "fcn_dist"]:
         if method == "classification":
             metrics = "accuracy"
             loss_f = "categorical_crossentropy"
@@ -67,6 +69,9 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
         if method == 'regression':
             metrics = "mse"
             loss_f = "mean_squared_error"
+        elif method == 'fcn_dist':
+            metrics = sparse_accuracy
+            loss_f = softmax_sparse_crossentropy
         else:
             metrics = distribution_cross_entropy
             loss_f = distribution_cross_entropy
@@ -92,6 +97,13 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
         model = models.FCN_8s_norm(num_classes, in_shape, l2_reg, nopad=True)
         # 今後の操作のためmethodを上書き
         method = "fcn"
+    elif method == "fcn_dist":
+        arch = "FCN_8s_dist"
+        print("arch : ", arch)
+        in_shape = (in_size, in_size, 3)
+        model = models.FCN_8s_dist(
+            num_classes, in_shape, l2_reg, out_num, nopad=True)
+        # 今後の操作のためmethodを上書き
     else:
         print("arch :", arch)
         if arch == "vgg_p5":
@@ -129,10 +141,15 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
                           metrics=[metrics]
                           )
         elif opt == "Adam":
-            model.compile(loss=loss_f,
-                          optimizer=Adam(lr=lr, decay=decay),
-                          metrics=[metrics]
-                          )
+            if method != "fcn_dist":
+                model.compile(loss=loss_f,
+                              optimizer=Adam(lr=lr, decay=decay),
+                              metrics=[metrics]
+                              )
+            else:
+                model.compile(loss={"fcn_out": loss_f, "dist_out": "mse"},
+                              optimizer=Adam(lr=lr, decay=decay),
+                              metrics=[])
         else:
             raise ValueError("argument 'opt' is wrong.")
     else:
@@ -158,7 +175,7 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
 
     print("train on " + dataset)
     start_time = timeit.default_timer()
-    if method != "fcn":
+    if method != "fcn" and method != "fcn_dist":
         # fcn以外は.fit()で学習
         X_train, y_train = DataLoader.load_data()
         print("data loaded.")
@@ -186,17 +203,20 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
             val_step = test_DL.num_samples // batch_size
             hist = model.fit_generator(
                 generator=fcn_generator(
-                    in_size, size, step, dataset, batch_size, "train"),
+                    in_size, size, step, dataset, batch_size, "train",
+                    resolution),
                 steps_per_epoch=steps_per_epoch,
                 epochs=epochs,
                 validation_data=fcn_generator(
-                    in_size, size, step, dataset, batch_size, "test"),
+                    in_size, size, step, dataset, batch_size, "test",
+                    resolution),
                 validation_steps=val_step
             )
         else:
             hist = model.fit_generator(
                 generator=fcn_generator(
-                    in_size, size, step, dataset, batch_size, "train", 10),
+                    in_size, size, step, dataset, batch_size, "train",
+                    resolution, 10),
                 steps_per_epoch=steps_per_epoch,
                 epochs=epochs,
             )
@@ -248,7 +268,7 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
 
 
 def train_fcn_model(dataset, opt, lr, epochs, batch_size, l2_reg, decay,
-                    img_size, resize_input=False):
+                    img_size, resize_input=False, resolution=None):
     """
     train fcn with whole image.
     dataset: str, "ips" or "melanoma" + 1 - 5
@@ -362,35 +382,35 @@ def train_fcn_model(dataset, opt, lr, epochs, batch_size, l2_reg, decay,
 
 
 if __name__ == '__main__':
-    # for i in range(1, 6):
-    #     K.clear_session()
-    #     dataset = "ips_" + str(i)
-    #     train_model(
-    #         method="fcn",
-    #         resolution=None,
-    #         dataset=dataset,
-    #         in_size=224,
-    #         size=150,
-    #         step=45,
-    #         arch="vgg_p5",
-    #         opt="Adam",
-    #         lr=1e-4,
-    #         epochs=15,
-    #         batch_size=16,
-    #         l2_reg=0,
-    #         decay=0
-    #     )
-    for i in range(5, 6):
+    for i in range(1, 6):
         K.clear_session()
-        dataset = "melanoma_" + str(i)
-        train_fcn_model(
+        dataset = "ips_" + str(i)
+        train_model(
+            method="fcn_dist",
+            resolution=[2],
             dataset=dataset,
+            in_size=224,
+            size=150,
+            step=45,
+            arch="vgg_p5",
             opt="Adam",
-            lr=1e-5,
-            epochs=50,
-            batch_size=1,
+            lr=1e-4,
+            epochs=1,
+            batch_size=16,
             l2_reg=5e-5,
-            decay=0,
-            img_size=(1000, 1000),
-            resize_input=False
+            decay=0
         )
+    # for i in range(5, 6):
+    #     K.clear_session()
+    #     dataset = "melanoma_" + str(i)
+    #     train_fcn_model(
+    #         dataset=dataset,
+    #         opt="Adam",
+    #         lr=1e-5,
+    #         epochs=50,
+    #         batch_size=1,
+    #         l2_reg=5e-5,
+    #         decay=0,
+    #         img_size=(1000, 1000),
+    #         resize_input=False
+    #     )

@@ -654,7 +654,9 @@ def FCN_8s_dist(classes, in_shape, l2_reg, num_out, nopad=False):
     x = Activation("relu")(x)
     x = Dropout(0.5)(x)
     center_fc = Flatten()(x)
-    center_fc = Dense(num_out)(center_fc)
+    center_fc = Dense(num_out, activation="linear",
+                      name="dist_out",
+                      kernel_regularizer=l2(l2_reg))(center_fc)
 
     score_p5 = Conv2D(filters=classes,
                       kernel_size=(1, 1),
@@ -728,7 +730,7 @@ def FCN_8s_dist(classes, in_shape, l2_reg, num_out, nopad=False):
                             bilinear_upsample_weights(8, classes)
                         ))(score_p345)
 
-    x = CroppingLike2D(K.int_shape(inputs))(x)
+    x = CroppingLike2D(K.int_shape(inputs), name="fcn_out")(x)
     model = Model(inputs=inputs, outputs=[x, center_fc])
     return model
 
