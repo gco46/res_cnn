@@ -166,6 +166,27 @@ class Patch_DataLoader(object):
                         num_samples += 1
         return num_samples
 
+    def load_data_two_target(self):
+        """
+        load dataset from image patch and mask path list.
+        get two target, fcn and distribution(regression target)
+
+        output: (array, array, array), X_train, fcn_target, dist_target
+        """
+        X = []
+        fcn_y = []
+        dist_y = []
+        for img_path, mask_path in zip(self.img_list, self.mask_list):
+            img_vecs, targets = self.crop_img(img_path, mask_path)
+            targets = list(zip(*targets))
+            X += img_vecs
+            fcn_y += list(targets[0])
+            dist_y += list(targets[1])
+        X = np.asarray(X)
+        fcn_y = np.asarray(fcn_y)
+        dist_y = np.asarray(dist_y)
+        return X, fcn_y, dist_y
+
     def load_data(self):
         """
         load dataset from image path and mask path list.
@@ -227,7 +248,11 @@ class Patch_DataLoader(object):
                                j * step:(j * step) + size]
                 # deciding target from tmp
                 target = self.calcTarget(m_patch)
-                if not isinstance(target, bool):
+                if isinstance(target, bool):
+                    continue
+                elif isinstance(target[0], bool):
+                    continue
+                else:
                     # targetに値が返っていれば、出力リストに加える
                     if self.in_size != size:
                         # リサイズ
@@ -295,6 +320,9 @@ class Patch_DataLoader(object):
         output: vector array or np.int64 or False(bool),
                 target vector or one class label (in classification)
                 return False if patch is filled by 'others' label
+
+            if method == "fcn_dist", output is (array, array)
+            fcn target vector and distribution(regression) target
         """
         if self.method in self.dist_method:
             target = self.calcRegTarget(m_patch)
@@ -315,6 +343,11 @@ class Patch_DataLoader(object):
                     return False
             m_patch = self.patch_resize(m_patch)
             target = m_patch.flatten()
+            if self.method == "fcn_dist":
+                dist_target = self.calcRegTarget(m_patch)
+                if isinstance(dist_target, bool):
+                    return False
+                target = (target, dist_target)
         return target
 
     def patch_resize(self, im):
@@ -325,7 +358,7 @@ class Patch_DataLoader(object):
         output: rgb image array, (s, s, channels)
         """
         im = Image.fromarray(np.uint8(im))
-        im = im.resize((self.in_size, self.in_size))
+        im = im.resize((self.in_size, self.in_size), Image.NEAREST)
         im = np.array(im, dtype=np.float32)
         return im
 
@@ -409,7 +442,7 @@ class Patch_DataLoader(object):
                         # othersが多ければ0とする
                         result.append([0., 0., 0.])
                         continue
-                    if self.method == "regression" or self.method == "ce_dist":
+                    if self.method in ["regression", "ce_dist", "fcn_dist"]:
                         # histogram 正規化
                         hist = hist[:-1] / np.sum(hist[:-1])
                         result.append(hist)
