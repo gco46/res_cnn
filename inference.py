@@ -22,10 +22,10 @@ def test_model(method, resolution, dataset, in_size, size, step,
     step: int,
     model_path: str, path to model path you want to test
     """
-    if not method in ['regression', 'classification', 'fcn', 'fcn_norm']:
+    if not method in ['regression', 'classification', 'fcn', 'fcn_norm', 'fcn_dist']:
         raise ValueError()
 
-    if method != "regression":
+    if method not in ["regression", "fcn_dist"]:
         resolution = None
 
     if 'ips' in dataset:
@@ -46,6 +46,12 @@ def test_model(method, resolution, dataset, in_size, size, step,
             model = models.FCN_8s(num_classes, in_shape, 0, nopad=True)
         elif method == "fcn_norm":
             model = models.FCN_8s_norm(num_classes, in_shape, 0, nopad=True)
+        else:
+            out_num = 0
+            for i in resolution:
+                out_num += i**2 * num_classes
+            model = models.FCN_8s_dist(
+                num_classes, in_shape, 0, out_num, nopad=True)
     model.load_weights(os.path.join(model_path, "train_weights.h5"))
 
     # データ読み込み
@@ -77,6 +83,8 @@ def test_model(method, resolution, dataset, in_size, size, step,
         # 推定
         # start_time = timeit.default_timer()
         prob = model.predict(patches, batch_size=16)
+        if isinstance(prob, list):
+            prob = prob[0]
         # elapsed_time += timeit.default_timer() - start_time
         PMC = ProbMapConstructer(
             model_out=prob,
@@ -149,7 +157,7 @@ def test_fcn_model(dataset, img_size, resize_input=False, model_path="valid"):
         pred = normalize_infmap(pred)
 
         if resize_input:
-            pred = resample_infmap(pred, in_h, in_w)
+            pred = resample_infmap(pred)
 
         if in_h > img.shape[0]:
             result = pred[0, offset:offset + img.shape[0], :, :]
@@ -164,32 +172,20 @@ def test_fcn_model(dataset, img_size, resize_input=False, model_path="valid"):
     print("test on %s takes %.7f m" % (dataset, test_time))
 
 
-def resample_infmap(prob_map, in_h, in_w, img_h=1200, img_w=1600):
+def resample_infmap(prob_map, img_h=1200, img_w=1600):
+    result = np.zeros((1, img_h, img_w, 3))
     prob_map *= 255
-    prob_map = prob_map.reshape((in_h, in_w, 3))
-    tmp = Image.fromarray(np.uint8(prob_map))
-    tmp = tmp.resize((img_w, img_h))
-    tmp = np.array(tmp, dtype=np.float32) / 255.
-
-    result = tmp.reshape((1, img_h, img_w, 3))
-    # for c in range(prob_map.shape[-1]):
-    #     tmp = Image.fromarray(np.uint8(prob_map[0, :, :, c]))
-    #     tmp = tmp.resize((img_w, img_h))
-    #     tmp = np.array(tmp, dtype=np.float32)
-    #     result[:, :, :, c] = tmp[...] / 255.
+    for c in range(prob_map.shape[-1]):
+        tmp = Image.fromarray(np.uint8(prob_map[0, :, :, c]))
+        tmp = tmp.resize((img_w, img_h))
+        tmp = np.array(tmp, dtype=np.float32)
+        result[:, :, :, c] = tmp[...] / 255.
     return result
 
 
 def normalize_infmap(prob_map):
     n, h, w, c = prob_map.shape
     reshaped_prob = prob_map.reshape(-1, c)
-    min_axis = np.min(reshaped_prob, axis=1)
-    min_bool = (min_axis < 0) * 1
-    min_axis3 = np.zeros(reshaped_prob.shape)
-    for i in range(c):
-        min_axis3[:, i] = min_axis * min_bool
-    reshaped_prob = reshaped_prob - min_axis3
-
     total = np.sum(reshaped_prob, axis=1)
     sum_axis = np.zeros(reshaped_prob.shape)
     for i in range(c):
@@ -230,22 +226,22 @@ def make_vis_dirs(model_path, resolution=None):
 
 
 if __name__ == '__main__':
-    # for i in range(1, 2):
-    #     dataset = "ips_" + str(i)
-    #     test_model(
-    #         method="fcn",
-    #         resolution=None,
-    #         dataset=dataset,
-    #         in_size=224,
-    #         size=150,
-    #         step=45,
-    #         model_path="valid"
-    #     )
-    for i in range(1, 6):
+    for i in range(1, 2):
         dataset = "ips_" + str(i)
-        test_fcn_model(
+        test_model(
+            method="fcn_dist",
+            resolution=[5],
             dataset=dataset,
-            img_size=(900, 1200),
-            resize_input=True,
+            in_size=224,
+            size=150,
+            step=45,
             model_path="valid"
         )
+    # for i in range(1, 6):
+    #     dataset = "melanoma_" + str(i)
+    #     test_fcn_model(
+    #         dataset=dataset,
+    #         img_size=(1000, 1000),
+    #         resize_input=False,
+    #         model_path="valid"
+    #     )
