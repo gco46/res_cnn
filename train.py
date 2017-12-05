@@ -148,6 +148,7 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
                               )
             else:
                 model.compile(loss={"fcn_out": loss_f, "dist_out": "mse"},
+                              loss_weights={"fcn_out": 0.2, "dist_out": 1.0},
                               optimizer=Adam(lr=lr, decay=decay),
                               metrics=[])
         else:
