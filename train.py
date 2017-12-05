@@ -260,6 +260,11 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
     plt.plot(range(nb_epoch), loss, label="loss")
     if "ips" in dataset:
         plt.plot(range(nb_epoch), val_loss, label="val_loss")
+    if method == "fcn_dist":
+        val_fcn_out_loss = hist.history["val_fcn_out_loss"]
+        val_dist_out_loss = hist.history["val_dist_out_loss"]
+        plt.plot(range(nb_epoch), val_fcn_out_loss, label="val_fcn_loss")
+        plt.plot(range(nb_epoch), val_dist_out_loss, label="val_dist_loss")
     plt.legend(loc='best', fontsize=10)
     plt.grid()
     plt.xlabel("epoch")
