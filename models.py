@@ -5,19 +5,19 @@ Created on Tue Sep  6 12:08:27 2016
 @author: tanaka
 """
 
-from keras.models import Sequential, Model
-from keras.layers import Dense, Flatten, Dropout, Activation, Input, BatchNormalization
-from keras.layers import Conv2D, Conv2DTranspose, MaxPooling2D, ZeroPadding2D
-from keras.layers.merge import Add
-from keras.initializers import Constant
-from keras.regularizers import l2
-from keras.engine.topology import Layer
 import keras.backend as K
-import tensorflow as tf
 import numpy as np
-from keras.utils import conv_utils
-from keras.engine.topology import Layer
+import tensorflow as tf
 from keras.engine import InputSpec
+from keras.engine.topology import Layer
+from keras.initializers import Constant
+from keras.layers import (Activation, BatchNormalization, Conv2D,
+                          Conv2DTranspose, Dense, Dropout, Flatten, Input,
+                          MaxPooling2D, ZeroPadding2D)
+from keras.layers.merge import Add
+from keras.models import Model, Sequential
+from keras.regularizers import l2
+from keras.utils import conv_utils
 
 
 def bilinear_upsample_weights(factor, n_class):
