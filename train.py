@@ -148,7 +148,7 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
                               )
             else:
                 model.compile(loss={"fcn_out": loss_f, "dist_out": "mse"},
-                              loss_weights={"fcn_out": 0.2, "dist_out": 1.0},
+                              loss_weights={"fcn_out": 0.5, "dist_out": 1.0},
                               optimizer=Adam(lr=lr, decay=decay),
                               metrics=[])
         else:
@@ -396,7 +396,7 @@ if __name__ == '__main__':
             resolution=[2],
             dataset=dataset,
             in_size=224,
-            size=150,
+            size=300,
             step=45,
             arch="vgg_p5",
             opt="Adam",
