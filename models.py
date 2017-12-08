@@ -911,19 +911,3 @@ def distribution_cross_entropy(resolution):
         return cross_entropy
     return loss
 
-
-# def distribution_binary(resolution):
-#     def loss(y_true, y_pred):
-#         nb_classes = K.int_shape(y_pred)[-1] // resolution**2
-#         y_true = K.reshape(y_true, (-1, nb_classes))
-#         y_true = K.argmax(y_true, axis=-1)
-#         y_true = K.one_hot(y_true, nb_classes)
-
-#         y_pred = K.reshape(y_pred, (-1, nb_classes))
-#         # y_pred = K.argmax(y_pred, axis=-1)
-#         # y_pred = K.one_hot(y_pred, nb_classes)
-
-#         bi_loss = K.mean(K.square(y_true), axis=-1)
-#         bi_loss = K.mean(bi_loss)
-#         return bi_loss
-#     return loss
