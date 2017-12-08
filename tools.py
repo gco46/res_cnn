@@ -250,8 +250,9 @@ class Patch_DataLoader(object):
                 target = self.calcTarget(m_patch)
                 if isinstance(target, bool):
                     continue
-                elif isinstance(target[0], bool):
-                    continue
+                elif isinstance(target, list):
+                    if isinstance(target[0], bool):
+                        continue
                 else:
                     # targetに値が返っていれば、出力リストに加える
                     if self.in_size != size:
