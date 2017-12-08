@@ -3,7 +3,7 @@ from tools import Patch_DataLoader
 import tools as tl
 # import ptools as ptl
 import models
-from generator import fcn_generator
+from generator import patch_generator
 from models import softmax_sparse_crossentropy, sparse_accuracy
 from models import distribution_cross_entropy
 from keras.utils import np_utils
@@ -103,7 +103,6 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
         in_shape = (in_size, in_size, 3)
         model = models.FCN_8s_dist(
             num_classes, in_shape, l2_reg, out_num, nopad=True)
-        # 今後の操作のためmethodを上書き
     else:
         print("arch :", arch)
         if arch == "vgg_p5":
@@ -148,7 +147,7 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
                               )
             else:
                 model.compile(loss={"fcn_out": loss_f, "dist_out": "mse"},
-                              loss_weights={"fcn_out": 0.5, "dist_out": 1.0},
+                              loss_weights={"fcn_out": 0.2, "dist_out": 1.0},
                               optimizer=Adam(lr=lr, decay=decay),
                               metrics=[])
         else:
@@ -178,13 +177,13 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
     start_time = timeit.default_timer()
     if method != "fcn" and method != "fcn_dist":
         # fcn以外は.fit()で学習
-        X_train, y_train = DataLoader.load_data()
-        print("data loaded.")
-        X_train = X_train.reshape(X_train.shape[0], in_size, in_size, 3)
-        X_train /= 255.
-        if method == "classification":
-            y_train = np_utils.to_categorical(y_train, num_classes=num_classes)
         if "ips" in dataset:
+            X_train, y_train = DataLoader.load_data()
+            print("data loaded.")
+            X_train = X_train.reshape(X_train.shape[0], in_size, in_size, 3)
+            X_train /= 255.
+            if method == "classification":
+                y_train = np_utils.to_categorical(y_train, num_classes=num_classes)
             X_test, y_test = test_DL.load_data()
             X_test = X_test.reshape(X_test.shape[0], in_size, in_size, 3)
             X_test /= 255.
@@ -197,27 +196,39 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
                              validation_data=(X_test, y_test),
                              verbose=1,
                              )
+        else:
+            steps_per_epoch = DataLoader.num_samples // batch_size
+            hist = model.fit_generator(
+                generator=patch_generator(
+                    in_size, size, step, dataset, batch_size, "train",
+                    resolution, method, 5
+                ),
+                steps_per_epoch=steps_per_epoch,
+                epochs=epochs,
+                verbose=1,
+            )
     else:
         # fcnはgeneratorで学習
         steps_per_epoch = DataLoader.num_samples // batch_size
         if "ips" in dataset:
             val_step = test_DL.num_samples // batch_size
             hist = model.fit_generator(
-                generator=fcn_generator(
+                generator=patch_generator(
                     in_size, size, step, dataset, batch_size, "train",
-                    resolution),
+                    resolution, method),
                 steps_per_epoch=steps_per_epoch,
                 epochs=epochs,
-                validation_data=fcn_generator(
+                validation_data=patch_generator(
                     in_size, size, step, dataset, batch_size, "test",
-                    resolution),
-                validation_steps=val_step
+                    resolution, method),
+                validation_steps=val_step,
+                verbose=2
             )
         else:
             hist = model.fit_generator(
-                generator=fcn_generator(
+                generator=patch_generator(
                     in_size, size, step, dataset, batch_size, "train",
-                    resolution, 10),
+                    resolution, method, 10),
                 steps_per_epoch=steps_per_epoch,
                 epochs=epochs,
             )
@@ -392,13 +403,13 @@ if __name__ == '__main__':
         K.clear_session()
         dataset = "ips_" + str(i)
         train_model(
-            method="fcn_dist",
+            method="regression",
             resolution=[2],
             dataset=dataset,
-            in_size=224,
+            in_size=150,
             size=300,
             step=45,
-            arch="vgg_p5",
+            arch="vgg_p4",
             opt="Adam",
             lr=1e-4,
             epochs=15,

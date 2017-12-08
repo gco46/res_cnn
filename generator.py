@@ -4,10 +4,11 @@ import tools as tl
 import numpy as np
 import gc
 import os
+from keras.utils import np_utils
 
 
-def fcn_generator(in_size, size, step, dataset, batch_size, mode,
-                  resolution, subsets=3):
+def patch_generator(in_size, size, step, dataset, batch_size, mode,
+                    resolution, method, subsets=3):
     """
     in_size: int,
     size: int,
@@ -36,21 +37,9 @@ def fcn_generator(in_size, size, step, dataset, batch_size, mode,
             mask_subset = np.array(mask_list)[bool_mask]
             img_subset = img_subset.tolist()
             mask_subset = mask_subset.tolist()
-            if resolution is None:
+            if method == "fcn_dist":
                 DataLoader = Patch_DataLoader(
-                    img_subset, mask_subset, in_size, size, step, "fcn", None
-                )
-                X_train, y_train = DataLoader.load_data()
-                X_train, y_train = shuffle_samples(X_train, y_train)
-                X_train = X_train.reshape(
-                    X_train.shape[0], in_size, in_size, 3)
-                X_train /= 255.
-                y_train = y_train.reshape(
-                    y_train.shape[0], in_size, in_size, 1)
-                y_train = y_train.astype(np.int32)
-            else:
-                DataLoader = Patch_DataLoader(
-                    img_subset, mask_subset, in_size, size, step, "fcn_dist",
+                    img_subset, mask_subset, in_size, size, step, method,
                     resolution
                 )
                 X_train, y_fcn, y_dist = DataLoader.load_data_two_target()
@@ -61,19 +50,42 @@ def fcn_generator(in_size, size, step, dataset, batch_size, mode,
                 X_train /= 255.
                 y_fcn = y_fcn.reshape(y_fcn.shape[0], in_size, in_size, 1)
                 y_fcn = y_fcn.astype(np.int32)
+            else:
+                DataLoader = Patch_DataLoader(
+                    img_subset, mask_subset, in_size, size, step, method,
+                    resolution
+                )
+                X_train, y_train = DataLoader.load_data()
+                X_train, y_train = shuffle_samples(X_train, y_train)
+                X_train = X_train.reshape(
+                    X_train.shape[0], in_size, in_size, 3)
+                X_train /= 255.
+                if method == "fcn":
+                    y_train = y_train.reshape(
+                        y_train.shape[0], in_size, in_size, 1)
+                    y_train = y_train.astype(np.int32)
+                elif method == "classification":
+                    if "melanoma" in dataset:
+                        num_classes = 2
+                    else:
+                        num_classes = 3
+                    y_train = np_utils.to_categorical(
+                        y_train, num_classes=num_classes)
+
             batch_loop = X_train.shape[0] // batch_size
+
             for j in range(batch_loop):     # batch loop
                 x = X_train[j * batch_size: (j + 1) * batch_size, ...]
-                if resolution is None:
-                    y = y_train[j * batch_size: (j + 1) * batch_size, ...]
-                    yield x, y
-                    # del x, y
-                else:
+                if method == "fcn_dist":
                     y1 = y_fcn[j * batch_size: (j + 1) * batch_size, ...]
                     y2 = y_dist[j * batch_size: (j + 1) * batch_size, ...]
                     yield x, [y1, y2]
                     # del x, y1, y2
-                gc.collect()
+                else:
+                    y = y_train[j * batch_size: (j + 1) * batch_size, ...]
+                    yield x, y
+                    # del x, y
+                    gc.collect()
             # del X_train
             # del y_train
             # gc.collect()
