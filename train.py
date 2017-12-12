@@ -222,7 +222,7 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
                     in_size, size, step, dataset, batch_size, "test",
                     resolution, method),
                 validation_steps=val_step,
-                verbose=2
+                verbose=1
             )
         else:
             hist = model.fit_generator(
@@ -403,15 +403,15 @@ if __name__ == '__main__':
         K.clear_session()
         dataset = "ips_" + str(i)
         train_model(
-            method="regression",
+            method="fcn_dist",
             resolution=[2],
             dataset=dataset,
-            in_size=150,
+            in_size=224,
             size=300,
             step=45,
             arch="vgg_p4",
-            opt="Adam",
-            lr=1e-4,
+            opt="SGD",
+            lr=1e-3,
             epochs=15,
             batch_size=16,
             l2_reg=5e-5,
