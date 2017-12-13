@@ -235,12 +235,12 @@ if __name__ == '__main__':
         dataset = "ips_" + str(i)
         test_model(
             method="fcn_dist",
-            resolution=[2],
+            resolution=[5],
             dataset=dataset,
             in_size=224,
-            size=150,
+            size=300,
             step=45,
-            model_path="ips/fcn_dist/Adam/l2=5e-5_res2-2_weight0210",
+            model_path="ips/fcn_dist/Adam/size300_res5-5/l2=5e-5_weight0510",
             prob_out="dist"
         )
     # for i in range(1, 6):

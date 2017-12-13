@@ -18,7 +18,7 @@ import timeit
 
 
 def train_model(method, resolution, dataset, in_size, size, step, arch,
-                opt, lr, epochs, batch_size, l2_reg, decay):
+                opt, lr, epochs, batch_size, l2_reg, decay, border_weight):
     """
     train models, and save weights and loss graph
     method: str: 'classification', 'regression' or 'fcn'
@@ -118,7 +118,8 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
 
     # インスタンス化はするが読み込みはあとで行う。
     DataLoader = Patch_DataLoader(
-        img_list, mask_list, in_size, size, step, method, resolution
+        img_list, mask_list, in_size, size, step, method, resolution,
+        border_weight=border_weight
     )
     test_DL = Patch_DataLoader(
         test_img_list, test_mask_list, in_size, size, step, method, resolution
@@ -178,7 +179,11 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
     if method != "fcn" and method != "fcn_dist":
         # fcn以外は.fit()で学習
         if "ips" in dataset:
-            X_train, y_train = DataLoader.load_data()
+            if border_weight is not None:
+                X_train, y_train, s_weight = DataLoader.load_data()
+            else:
+                X_train, y_train = DataLoader.load_data()
+                s_weight = None
             print("data loaded.")
             X_train = X_train.reshape(X_train.shape[0], in_size, in_size, 3)
             X_train /= 255.
@@ -194,6 +199,7 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
                              batch_size=batch_size,
                              epochs=epochs,
                              validation_data=(X_test, y_test),
+                             sample_weight=s_weight,
                              verbose=1,
                              )
         else:
@@ -222,7 +228,7 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
                     in_size, size, step, dataset, batch_size, "test",
                     resolution, method),
                 validation_steps=val_step,
-                verbose=2
+                verbose=1
             )
         else:
             hist = model.fit_generator(
@@ -407,15 +413,16 @@ if __name__ == '__main__':
             resolution=[2],
             dataset=dataset,
             in_size=150,
-            size=300,
+            size=150,
             step=45,
             arch="vgg_p4",
             opt="Adam",
             lr=1e-4,
             epochs=15,
             batch_size=16,
-            l2_reg=5e-5,
-            decay=0
+            l2_reg=0,
+            decay=0,
+            border_weight=2.0
         )
     # for i in range(5, 6):
     #     K.clear_session()

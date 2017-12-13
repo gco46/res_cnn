@@ -39,10 +39,10 @@ def make_model_name(arch, size, res, fcn=False):
 
 data = "ips"
 
-in_size = 224
-size = [150, 100]
+in_size = 150
+size = [150, 300]
 step = 45
-resolution = [None]
+resolution = [[2], [5]]
 lr = 1e-4
 opt = "Adam"
 batch_size = 16
@@ -59,7 +59,7 @@ for s in size:
             method = "regression"
         for i in range(1, 6):
             K.clear_session()
-            model_name = make_model_name(arch, s, r, fcn=True)
+            model_name = make_model_name(arch, s, r, fcn=False)
             mpath = osp.join(data, method, opt, model_name)
             dataset = data + "_" + str(i)
 
@@ -81,7 +81,8 @@ for s in size:
                 epochs=epochs,
                 batch_size=batch_size,
                 l2_reg=l2_reg,
-                decay=decay
+                decay=decay,
+                border_weight=4.0
             )
             test_model(
                 method=method,
