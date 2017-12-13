@@ -113,7 +113,8 @@ class Patch_DataLoader(object):
                  method=None,
                  resolution=None,
                  mode="train",
-                 threshold=0.2):
+                 threshold=0.2,
+                 border_weight=None):
         """
         img_list: list, image path list, path is str
         mask_list: list,
@@ -135,6 +136,7 @@ class Patch_DataLoader(object):
         self.method = method
         self.mode = mode
         self.threshold = threshold
+        self.border_weight = border_weight
         # datasetを特定
         if 'ips' in img_list[0]:
             self.datatype = 'ips'
@@ -176,16 +178,22 @@ class Patch_DataLoader(object):
         X = []
         fcn_y = []
         dist_y = []
+        weights = []
         for img_path, mask_path in zip(self.img_list, self.mask_list):
-            img_vecs, targets = self.crop_img(img_path, mask_path)
+            img_vecs, targets, s_weight = self.crop_img(img_path, mask_path)
             targets = list(zip(*targets))
             X += img_vecs
             fcn_y += list(targets[0])
             dist_y += list(targets[1])
+            weights += s_weight
         X = np.asarray(X)
         fcn_y = np.asarray(fcn_y)
         dist_y = np.asarray(dist_y)
-        return X, fcn_y, dist_y
+        weights = np.asarray(weights)
+        if self.border_weight is not None:
+            return X, fcn_y, dist_y, weights
+        else:
+            return X, fcn_y, dist_y
 
     def load_data(self):
         """
@@ -197,14 +205,20 @@ class Patch_DataLoader(object):
         """
         X = []
         y = []
+        weights = []
         for img_path, mask_path in zip(self.img_list, self.mask_list):
             # img, mask を一つずつ読み込んでcrop
-            img_vecs, targets = self.crop_img(img_path, mask_path)
+            img_vecs, targets, s_weight = self.crop_img(img_path, mask_path)
             X += img_vecs
             y += targets
+            weights += s_weight
         X = np.asarray(X)
         y = np.asarray(y)
-        return X, y
+        weights = np.asarray(weights)
+        if self.border_weight is not None:
+            return X, y, weights
+        else:
+            return X, y
 
     def crop_img(self, img_path, mask_path, to_array=False):
         """
@@ -240,6 +254,7 @@ class Patch_DataLoader(object):
 
         img_vecs = []
         target_list = []
+        s_weight = []
         for i in range((h - size) // step + 1):
             for j in range((w - size) // step + 1):
                 patch = img[i * step:(i * step) + size,
@@ -248,6 +263,7 @@ class Patch_DataLoader(object):
                                j * step:(j * step) + size]
                 # deciding target from tmp
                 target = self.calcTarget(m_patch)
+                target, border = target
                 if isinstance(target, bool):
                     continue
                 elif isinstance(target, list):
@@ -260,10 +276,14 @@ class Patch_DataLoader(object):
                         patch = self.patch_resize(patch)
                     img_vecs.append(patch.flatten())
                     target_list.append(target)
+                    if border:
+                        s_weight.append(self.border_weight)
+                    else:
+                        s_weight.append(1.0)
         if to_array:
             return np.asarray(img_vecs), np.asarray(target_list)
         else:
-            return img_vecs, target_list
+            return img_vecs, target_list, s_weight
 
     def image2label(self, mask, evaluate=False):
         """
@@ -341,15 +361,23 @@ class Patch_DataLoader(object):
                 hist = self.class_label_hist(m_patch)
                 n = int(m_patch.size * self.threshold)
                 if hist[-1] > n and self.mode == "train":
-                    return False
+                    return False, False
             m_patch = self.patch_resize(m_patch)
             target = m_patch.flatten()
             if self.method == "fcn_dist":
                 dist_target = self.calcRegTarget(m_patch)
                 if isinstance(dist_target, bool):
-                    return False
+                    return False, False
                 target = (target, dist_target)
-        return target
+        
+        # others を除いたラベルでborder判定
+        hist = self.class_label_hist(m_patch)
+        m = int(hist[:-1].sum() * (1 - self.threshold))
+        if hist[:-1].max() < m:
+            border = True
+        else:
+            border = False
+        return target, border
 
     def patch_resize(self, im):
         """
@@ -399,7 +427,6 @@ class Patch_DataLoader(object):
             n = int(m_patch.size * self.threshold)
             if hist[-1] > n and self.mode == "train":
                 return False
-
             # 中心ピクセルがothersだった場合、Trainingには使わない
             # h, w = m_patch.shape
             # if m_patch[h // 2, w // 2] == 3 and self.mode == "train":
