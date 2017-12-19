@@ -84,12 +84,18 @@ def test_model(method, resolution, dataset, in_size, size, step,
         # start_time = timeit.default_timer()
         prob = model.predict(patches, batch_size=16)
         if isinstance(prob, list):
-            if prob_out == "fcn":
-                prob = prob[0]
-            elif prob_out == "dist":
-                prob = prob[1]
+            if len(resolution) > 1:
+                new_prob = prob[0]
+                for p in prob[1:]:
+                    new_prob = np.hstack((new_prob, p))
+                prob = new_prob
             else:
-                raise ValueError("prob_out is wrong")
+                if prob_out == "fcn":
+                    prob = prob[0]
+                elif prob_out == "dist":
+                    prob = prob[1]
+                else:
+                    raise ValueError("prob_out is wrong")
         # elapsed_time += timeit.default_timer() - start_time
         PMC = ProbMapConstructer(
             model_out=prob,
@@ -231,17 +237,17 @@ def make_vis_dirs(model_path, resolution=None):
 
 
 if __name__ == '__main__':
-    for i in range(1, 6):
+    for i in range(1, 2):
         dataset = "ips_" + str(i)
         test_model(
-            method="fcn_dist",
-            resolution=[5],
+            method="regression",
+            resolution=[1, 2, 5],
             dataset=dataset,
-            in_size=224,
+            in_size=150,
             size=300,
             step=45,
-            model_path="ips/fcn_dist/Adam/size300_res5-5/l2=5e-5_weight0510",
-            prob_out="dist"
+            model_path="valid",
+            prob_out=None
         )
     # for i in range(1, 6):
     #     dataset = "melanoma_" + str(i)

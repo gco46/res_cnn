@@ -96,6 +96,55 @@ def myVGG_p4(size, l2_reg, method, out_num):
     return model
 
 
+def myVGG_p4_multi(size, l2_reg, method, out_num):
+    if method == "classification":
+        out_act = "softmax"
+    else:
+        out_act = "linear"
+    inputs = Input(shape=(size, size, 3))
+    x = ZeroPadding2D((1, 1))(inputs)
+    x = Conv2D(64, (3, 3), activation="relu", kernel_regularizer=l2(l2_reg))(x)
+    x = ZeroPadding2D((1, 1))(x)
+    x = Conv2D(64, (3, 3), activation="relu", kernel_regularizer=l2(l2_reg))(x)
+    x = MaxPooling2D((2, 2), strides=(2, 2))(x)
+
+    x = ZeroPadding2D((1, 1))(x)
+    x = Conv2D(128, (3, 3), activation="relu", kernel_regularizer=l2(l2_reg))(x)
+    x = ZeroPadding2D((1, 1))(x)
+    x = Conv2D(128, (3, 3), activation="relu", kernel_regularizer=l2(l2_reg))(x)
+    x = MaxPooling2D((2, 2), strides=(2, 2))(x)
+
+    x = ZeroPadding2D((1, 1))(x)
+    x = Conv2D(256, (3, 3), activation="relu", kernel_regularizer=l2(l2_reg))(x)
+    x = ZeroPadding2D((1, 1))(x)
+    x = Conv2D(256, (3, 3), activation="relu", kernel_regularizer=l2(l2_reg))(x)
+    x = ZeroPadding2D((1, 1))(x)
+    x = Conv2D(256, (3, 3), activation="relu", kernel_regularizer=l2(l2_reg))(x)
+    x = MaxPooling2D((2, 2), strides=(2, 2))(x)
+
+    x = ZeroPadding2D((1, 1))(x)
+    x = Conv2D(512, (3, 3), activation="relu", kernel_regularizer=l2(l2_reg))(x)
+    x = ZeroPadding2D((1, 1))(x)
+    x = Conv2D(512, (3, 3), activation="relu", kernel_regularizer=l2(l2_reg))(x)
+    x = ZeroPadding2D((1, 1))(x)
+    x = Conv2D(512, (3, 3), activation="relu", kernel_regularizer=l2(l2_reg))(x)
+    x = MaxPooling2D((2, 2), strides=(2, 2))(x)
+
+    x = Flatten()(x)
+    x = Dense(1024, activation="relu", kernel_regularizer=l2(l2_reg))(x)
+    x = Dropout(0.5)(x)
+    x = Dense(1024, activation="relu", kernel_regularizer=l2(l2_reg))(x)
+    x = Dropout(0.5)(x)
+
+    out = []
+    for num_unit in out_num:
+        tmp = Dense(num_unit, activation=out_act, kernel_regularizer=l2(l2_reg))(x)
+        out.append(tmp)
+    model = Model(inputs=inputs, outputs=out)
+    return model
+
+
+
 def myVGG_p5(size, l2_reg, method, out_num):
     """
     this model is same to VGG16

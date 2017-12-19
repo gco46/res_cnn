@@ -42,13 +42,13 @@ data = "ips"
 in_size = 150
 size = [150, 300]
 step = 45
-resolution = [[2], [5]]
+resolution = [[1, 2, 5]]
 lr = 1e-4
 opt = "Adam"
 batch_size = 16
 epochs = 15
 decay = 0
-l2_reg = 5e-5
+l2_reg = 0
 arch = "vgg_p4"
 
 for s in size:
@@ -82,7 +82,7 @@ for s in size:
                 batch_size=batch_size,
                 l2_reg=l2_reg,
                 decay=decay,
-                border_weight=4.0
+                border_weight=None
             )
             test_model(
                 method=method,

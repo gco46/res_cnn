@@ -63,9 +63,11 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
         resolution = None
         out_num = num_classes
     else:
-        out_num = 0
+        out_num = []
         for i in resolution:
-            out_num += i**2 * num_classes
+            out_num.append(i**2 * num_classes)
+        if len(out_num) == 1:
+            out_num = out_num[0]
         if method == 'regression':
             metrics = "mse"
             loss_f = "mean_squared_error"
@@ -109,6 +111,8 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
             model = models.myVGG_p5(in_size, l2_reg, method, out_num)
         elif arch == "vgg_p4":
             model = models.myVGG_p4(in_size, l2_reg, method, out_num)
+        elif arch == "vgg_p4_multi":
+            model = models.myVGG_p4_multi(in_size, l2_reg, method, out_num)
         else:
             raise ValueError("unknown arch")
 
@@ -117,13 +121,31 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
     test_img_list, test_mask_list = tl.load_datapath(dataset, mode="test")
 
     # インスタンス化はするが読み込みはあとで行う。
-    DataLoader = Patch_DataLoader(
-        img_list, mask_list, in_size, size, step, method, resolution,
-        border_weight=border_weight
-    )
-    test_DL = Patch_DataLoader(
-        test_img_list, test_mask_list, in_size, size, step, method, resolution
-    )
+    if resolution is None:
+        resolution = []
+    if len(resolution) > 1:
+        dllist = []
+        test_dllist =[]
+        for r in resolution:
+            dl = Patch_DataLoader(
+                img_list, mask_list, in_size, size, step, method, [r],
+                border_weight=border_weight
+            )
+            dllist.append(dl)
+            test_DL = Patch_DataLoader(
+                test_img_list, test_mask_list, in_size, size, step, method,
+                [r],
+            )
+            test_dllist.append(test_DL)
+    else:
+        DataLoader = Patch_DataLoader(
+            img_list, mask_list, in_size, size, step, method, resolution,
+            border_weight=border_weight
+        )
+        test_DL = Patch_DataLoader(
+            test_img_list, test_mask_list, in_size, size, step, method,
+            resolution
+        )
 
     # optimizer指定、モデルコンパイル
     # loss関数が引数をとる場合と場合分け
@@ -141,16 +163,24 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
                           metrics=[metrics]
                           )
         elif opt == "Adam":
-            if method != "fcn_dist":
-                model.compile(loss=loss_f,
-                              optimizer=Adam(lr=lr, decay=decay),
-                              metrics=[metrics]
-                              )
-            else:
+            if method == "fcn_dist":
                 model.compile(loss={"fcn_out": loss_f, "dist_out": "mse"},
                               loss_weights={"fcn_out": 0.2, "dist_out": 1.0},
                               optimizer=Adam(lr=lr, decay=decay),
                               metrics=[])
+            elif method == "regression" and len(resolution) > 1:
+                lw = []
+                for r in resolution:
+                    lw.append(1 / r**2)
+                model.compile(loss=loss_f,
+                              loss_weights=lw,
+                              optimizer=Adam(lr=lr, decay=decay),
+                              metrics=[])
+            else:
+                model.compile(loss=loss_f,
+                              optimizer=Adam(lr=lr, decay=decay),
+                              metrics=[metrics]
+                              )
         else:
             raise ValueError("argument 'opt' is wrong.")
     else:
@@ -180,16 +210,25 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
         # fcn以外は.fit()で学習
         if "ips" in dataset:
             if border_weight is not None:
-                X_train, y_train, s_weight = DataLoader.load_data()
+                if len(resolution) > 1:
+                    X_train, y_train, s_weight = load_multiRes_data(dllist)
+                else:
+                    X_train, y_train, s_weight = DataLoader.load_data()
             else:
-                X_train, y_train = DataLoader.load_data()
+                if len(resolution) > 1:
+                    X_train, y_train = load_multiRes_data(dllist)
+                else:
+                    X_train, y_train = DataLoader.load_data()
                 s_weight = None
             print("data loaded.")
             X_train = X_train.reshape(X_train.shape[0], in_size, in_size, 3)
             X_train /= 255.
             if method == "classification":
                 y_train = np_utils.to_categorical(y_train, num_classes=num_classes)
-            X_test, y_test = test_DL.load_data()
+            if len(resolution) > 1:
+                X_test, y_test = load_multiRes_data(test_dllist)
+            else:
+                X_test, y_test = test_DL.load_data()
             X_test = X_test.reshape(X_test.shape[0], in_size, in_size, 3)
             X_test /= 255.
             if method == "classification":
@@ -282,12 +321,34 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
         val_dist_out_loss = hist.history["val_dist_out_loss"]
         plt.plot(range(nb_epoch), val_fcn_out_loss, label="val_fcn_loss")
         plt.plot(range(nb_epoch), val_dist_out_loss, label="val_dist_loss")
+    elif len(resolution) > 1:
+        val_dense3 = hist.history["val_dense_3_loss"]
+        val_dense4 = hist.history["val_dense_4_loss"]
+        val_dense5 = hist.history["val_dense_5_loss"]
+        plt.plot(range(nb_epoch), val_dense3, label="val_dense1")
+        plt.plot(range(nb_epoch), val_dense4, label="val_dense2")
+        plt.plot(range(nb_epoch), val_dense5, label="val_dense3")
     plt.legend(loc='best', fontsize=10)
     plt.grid()
     plt.xlabel("epoch")
     plt.ylabel("loss")
     plt.savefig(os.path.join(dir_path, "loss.png"))
     plt.close()
+
+
+def load_multiRes_data(dllist):
+    y_list = []
+    s_weight = None
+    for dl in dllist:
+        try:
+            X, y = dl.load_data()
+        except ValueError:
+            X, y, s_weight = dl.load_data()
+        y_list.append(y)
+    if s_weight is None:
+        return X, y_list
+    else:
+        return X, y_list, s_weight
 
 
 def train_fcn_model(dataset, opt, lr, epochs, batch_size, l2_reg, decay,
@@ -410,19 +471,19 @@ if __name__ == '__main__':
         dataset = "ips_" + str(i)
         train_model(
             method="regression",
-            resolution=[2],
+            resolution=[1, 2, 5],
             dataset=dataset,
             in_size=150,
-            size=150,
+            size=300,
             step=45,
-            arch="vgg_p4",
+            arch="vgg_p4_multi",
             opt="Adam",
             lr=1e-4,
-            epochs=15,
+            epochs=1,
             batch_size=16,
             l2_reg=0,
             decay=0,
-            border_weight=2.0
+            border_weight=None
         )
     # for i in range(5, 6):
     #     K.clear_session()
