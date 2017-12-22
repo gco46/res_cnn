@@ -109,25 +109,33 @@ def myVGG_p4_multi(size, l2_reg, method, out_num):
     x = MaxPooling2D((2, 2), strides=(2, 2))(x)
 
     x = ZeroPadding2D((1, 1))(x)
-    x = Conv2D(128, (3, 3), activation="relu", kernel_regularizer=l2(l2_reg))(x)
+    x = Conv2D(128, (3, 3), activation="relu",
+               kernel_regularizer=l2(l2_reg))(x)
     x = ZeroPadding2D((1, 1))(x)
-    x = Conv2D(128, (3, 3), activation="relu", kernel_regularizer=l2(l2_reg))(x)
+    x = Conv2D(128, (3, 3), activation="relu",
+               kernel_regularizer=l2(l2_reg))(x)
     x = MaxPooling2D((2, 2), strides=(2, 2))(x)
 
     x = ZeroPadding2D((1, 1))(x)
-    x = Conv2D(256, (3, 3), activation="relu", kernel_regularizer=l2(l2_reg))(x)
+    x = Conv2D(256, (3, 3), activation="relu",
+               kernel_regularizer=l2(l2_reg))(x)
     x = ZeroPadding2D((1, 1))(x)
-    x = Conv2D(256, (3, 3), activation="relu", kernel_regularizer=l2(l2_reg))(x)
+    x = Conv2D(256, (3, 3), activation="relu",
+               kernel_regularizer=l2(l2_reg))(x)
     x = ZeroPadding2D((1, 1))(x)
-    x = Conv2D(256, (3, 3), activation="relu", kernel_regularizer=l2(l2_reg))(x)
+    x = Conv2D(256, (3, 3), activation="relu",
+               kernel_regularizer=l2(l2_reg))(x)
     x = MaxPooling2D((2, 2), strides=(2, 2))(x)
 
     x = ZeroPadding2D((1, 1))(x)
-    x = Conv2D(512, (3, 3), activation="relu", kernel_regularizer=l2(l2_reg))(x)
+    x = Conv2D(512, (3, 3), activation="relu",
+               kernel_regularizer=l2(l2_reg))(x)
     x = ZeroPadding2D((1, 1))(x)
-    x = Conv2D(512, (3, 3), activation="relu", kernel_regularizer=l2(l2_reg))(x)
+    x = Conv2D(512, (3, 3), activation="relu",
+               kernel_regularizer=l2(l2_reg))(x)
     x = ZeroPadding2D((1, 1))(x)
-    x = Conv2D(512, (3, 3), activation="relu", kernel_regularizer=l2(l2_reg))(x)
+    x = Conv2D(512, (3, 3), activation="relu",
+               kernel_regularizer=l2(l2_reg))(x)
     x = MaxPooling2D((2, 2), strides=(2, 2))(x)
 
     x = Flatten()(x)
@@ -138,11 +146,11 @@ def myVGG_p4_multi(size, l2_reg, method, out_num):
 
     out = []
     for num_unit in out_num:
-        tmp = Dense(num_unit, activation=out_act, kernel_regularizer=l2(l2_reg))(x)
+        tmp = Dense(num_unit, activation=out_act,
+                    kernel_regularizer=l2(l2_reg))(x)
         out.append(tmp)
     model = Model(inputs=inputs, outputs=out)
     return model
-
 
 
 def myVGG_p5(size, l2_reg, method, out_num):
@@ -950,8 +958,8 @@ def distribution_cross_entropy(resolution):
     def loss(y_true, y_pred):
         nb_classes = K.int_shape(y_pred)[-1] // resolution**2
         y_true = K.reshape(y_true, (-1, nb_classes))
-        y_true = K.argmax(y_true, axis=-1)
-        y_true = K.one_hot(y_true, nb_classes)
+        # y_true = K.argmax(y_true, axis=-1)
+        # y_true = K.one_hot(y_true, nb_classes)
 
         y_pred = K.reshape(y_pred, (-1, nb_classes))
         log_softmax = tf.nn.log_softmax(y_pred)
@@ -959,4 +967,3 @@ def distribution_cross_entropy(resolution):
         cross_entropy = K.mean(cross_entropy)
         return cross_entropy
     return loss
-
