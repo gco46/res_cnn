@@ -125,7 +125,7 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
         resolution = []
     if len(resolution) > 1:
         dllist = []
-        test_dllist =[]
+        test_dllist = []
         for r in resolution:
             dl = Patch_DataLoader(
                 img_list, mask_list, in_size, size, step, method, [r],
@@ -199,7 +199,7 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
         elif opt == "Adam":
             model.compile(loss=loss_f(resolution[0]),
                           optimizer=Adam(lr=lr, decay=decay),
-                          metrics=[metrics(resolution[0])]
+                          metrics=[]
                           )
         else:
             raise ValueError("argument 'opt' is wrong.")
@@ -224,7 +224,8 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
             X_train = X_train.reshape(X_train.shape[0], in_size, in_size, 3)
             X_train /= 255.
             if method == "classification":
-                y_train = np_utils.to_categorical(y_train, num_classes=num_classes)
+                y_train = np_utils.to_categorical(
+                    y_train, num_classes=num_classes)
             if len(resolution) > 1:
                 X_test, y_test = load_multiRes_data(test_dllist)
             else:
@@ -470,13 +471,13 @@ if __name__ == '__main__':
         K.clear_session()
         dataset = "ips_" + str(i)
         train_model(
-            method="regression",
-            resolution=[1, 2, 5],
+            method="ce_dist",
+            resolution=[1],
             dataset=dataset,
             in_size=150,
             size=300,
             step=45,
-            arch="vgg_p4_multi",
+            arch="vgg_p4",
             opt="Adam",
             lr=1e-4,
             epochs=1,

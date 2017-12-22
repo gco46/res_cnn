@@ -42,7 +42,7 @@ data = "ips"
 in_size = 150
 size = [150, 300]
 step = 45
-resolution = [[1, 2, 5]]
+resolution = [[1], [2], [5]]
 lr = 1e-4
 opt = "Adam"
 batch_size = 16
@@ -56,7 +56,7 @@ for s in size:
         if r is None:
             method = "fcn"
         else:
-            method = "regression"
+            method = "ce_dist"
         for i in range(1, 6):
             K.clear_session()
             model_name = make_model_name(arch, s, r, fcn=False)

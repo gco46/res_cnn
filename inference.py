@@ -22,10 +22,11 @@ def test_model(method, resolution, dataset, in_size, size, step,
     step: int,
     model_path: str, path to model path you want to test
     """
-    if not method in ['regression', 'classification', 'fcn', 'fcn_norm', 'fcn_dist']:
+    if not method in ['regression', 'classification', 'fcn', 'fcn_norm',
+                      'fcn_dist', 'ce_dist']:
         raise ValueError()
 
-    if method not in ["regression", "fcn_dist"]:
+    if method not in ["regression", "fcn_dist", "ce_dist"]:
         resolution = None
 
     if 'ips' in dataset:
@@ -240,8 +241,8 @@ if __name__ == '__main__':
     for i in range(1, 2):
         dataset = "ips_" + str(i)
         test_model(
-            method="regression",
-            resolution=[1, 2, 5],
+            method="ce_dist",
+            resolution=[1],
             dataset=dataset,
             in_size=150,
             size=300,
