@@ -6,6 +6,7 @@ import models
 from generator import patch_generator
 from models import softmax_sparse_crossentropy, sparse_accuracy
 from models import distribution_cross_entropy
+from models import hamming_distance
 from keras.utils import np_utils
 from keras.optimizers import SGD, Adam
 import keras.backend as K
@@ -40,7 +41,7 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
     output: None
     """
     m_list = ['regression', 'classification', 'fcn',
-              'fcn_norm', 'ce_dist', 'fcn_dist']
+              'fcn_norm', 'ce_dist', 'fcn_dist', 'hamming']
     if method not in m_list:
         raise ValueError()
 
@@ -53,7 +54,7 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
         raise ValueError("dataset must be ips or melanoma")
 
     # ネットワークの出力ユニット数指定
-    if method not in ["regression", "ce_dist", "fcn_dist"]:
+    if method not in ["regression", "ce_dist", "fcn_dist", "hamming"]:
         if method == "classification":
             metrics = "accuracy"
             loss_f = "categorical_crossentropy"
@@ -74,9 +75,12 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
         elif method == 'fcn_dist':
             metrics = sparse_accuracy
             loss_f = softmax_sparse_crossentropy
-        else:
+        elif method == "cd_dist":
             metrics = distribution_cross_entropy
             loss_f = distribution_cross_entropy
+        elif method == "hamming":
+            metrics = None
+            loss_f = hamming_distance
 
     # weights ディレクトリ作成
     try:
@@ -149,11 +153,11 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
 
     # optimizer指定、モデルコンパイル
     # loss関数が引数をとる場合と場合分け
-    if method != "ce_dist":
+    if method not in ["ce_dist", "hamming"]:
         if opt == "SGD":
             model.compile(loss=loss_f,
                           optimizer=SGD(lr=lr, momentum=0.9, decay=decay),
-                          metrics=[metrics]
+                          metrics=[]
                           )
         elif opt == "Adadelta":
             lr = 1.0
@@ -168,7 +172,7 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
                               loss_weights={"fcn_out": 0.2, "dist_out": 1.0},
                               optimizer=Adam(lr=lr, decay=decay),
                               metrics=[])
-            elif method == "regression" and len(resolution) > 1:
+            elif method in ["regression", "hamming"] and len(resolution) > 1:
                 lw = []
                 for r in resolution:
                     lw.append(1 / r**2)
@@ -179,7 +183,7 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
             else:
                 model.compile(loss=loss_f,
                               optimizer=Adam(lr=lr, decay=decay),
-                              metrics=[metrics]
+                              metrics=[]
                               )
         else:
             raise ValueError("argument 'opt' is wrong.")
@@ -187,14 +191,14 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
         if opt == "SGD":
             model.compile(loss=loss_f(resolution[0]),
                           optimizer=SGD(lr=lr, momentum=0.9, decay=decay),
-                          metrics=[metrics(resolution[0])]
+                          metrics=[]
                           )
         elif opt == "Adadelta":
             lr = 1.0
             decay = 0
             model.compile(loss=loss_f(resolution[0]),
                           optimizer=Adadelta(),
-                          metrics=[metrics(resolution[0])]
+                          metrics=[]
                           )
         elif opt == "Adam":
             model.compile(loss=loss_f(resolution[0]),
@@ -472,15 +476,15 @@ if __name__ == '__main__':
         dataset = "ips_" + str(i)
         train_model(
             method="ce_dist",
-            resolution=[1],
+            resolution=[5],
             dataset=dataset,
             in_size=150,
-            size=300,
+            size=150,
             step=45,
             arch="vgg_p4",
             opt="Adam",
-            lr=1e-4,
-            epochs=1,
+            lr=1e-5,
+            epochs=15,
             batch_size=16,
             l2_reg=0,
             decay=0,

@@ -967,3 +967,22 @@ def distribution_cross_entropy(resolution):
         cross_entropy = K.mean(cross_entropy)
         return cross_entropy
     return loss
+
+
+def hamming_distance(resolution):
+    def loss(y_true, y_pred):
+        length = K.int_shape(y_pred)[-1]
+        nb_classes = length // resolution**2
+        # y_pred = K.reshape(y_pred, (-1, nb_classes))
+        # softmax = K.softmax(y_pred)
+        # y_pred = K.reshape(softmax, (-1, length))
+        y_pred = tf.nn.sigmoid(y_pred)
+
+        zero_error = tf.multiply(y_true, 1.0 - y_pred)
+        zero_error = K.sum(zero_error, axis=1)
+        one_error = tf.multiply(1.0 - y_true, y_pred)
+        one_error = K.sum(one_error, axis=1)
+
+        hamming_d = zero_error + one_error
+        return hamming_d
+    return loss

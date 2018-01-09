@@ -95,7 +95,7 @@ def make_fcn_input(in_w, in_h, num_classes, dataset, resize_input, mode):
 
 class Patch_DataLoader(object):
     label_d = {'ips': (0, 1, 2, 3), 'melanoma': (0, 1)}
-    dist_method = ["regression", "ce_dist"]
+    dist_method = ["regression", "ce_dist", "fcn_dist", "hamming"]
     # in train phase
     # ips: good -> 0, bad -> 1, bgd -> 2, others -> 3
     # melanoma: background -> 0, tumor -> 1
@@ -137,6 +137,10 @@ class Patch_DataLoader(object):
         self.mode = mode
         self.threshold = threshold
         self.border_weight = border_weight
+        if self.method == "hamming":
+            self.binary = True
+        else:
+            self.binary = False
         # datasetを特定
         if 'ips' in img_list[0]:
             self.datatype = 'ips'
@@ -347,6 +351,9 @@ class Patch_DataLoader(object):
         """
         if self.method in self.dist_method:
             target = self.calcRegTarget(m_patch)
+            if not isinstance(target, bool):
+                if self.binary:
+                    target = self.to_binary(target)
         elif self.method == "classification":
             h, w = m_patch.shape
             label = m_patch[h // 2, w // 2]
@@ -378,6 +385,28 @@ class Patch_DataLoader(object):
         else:
             border = False
         return target, border
+
+    def to_binary(self, target):
+        """
+        transform target vector to binary
+        target: the output of calcRegTarget
+        """
+        # reshapeしてargmax調べる
+        target = target.reshape(-1, self.num_classes)
+        max_idx = np.argmax(target, axis=1)
+        h, w = target.shape
+
+        # others ラベルを調べる
+        s = np.sum(target, axis=1)
+        zero_idx = (s < 0.1)
+
+        # argmaxを1に，それ以外を0に
+        # othersラベルがあれば0, 0, 0に
+        result = np.zeros((h, w))
+        result[np.arange(h), max_idx] = 1.
+        result[zero_idx, :] = 0.
+
+        return result.flatten()
 
     def patch_resize(self, im):
         """
@@ -470,7 +499,7 @@ class Patch_DataLoader(object):
                         # othersが多ければ0とする
                         result.append([0., 0., 0.])
                         continue
-                    if self.method in ["regression", "ce_dist", "fcn_dist"]:
+                    if self.method in self.dist_method:
                         # histogram 正規化
                         hist = hist[:-1] / np.sum(hist[:-1])
                         result.append(hist)
