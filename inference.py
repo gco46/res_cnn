@@ -85,18 +85,12 @@ def test_model(method, resolution, dataset, in_size, size, step,
         # start_time = timeit.default_timer()
         prob = model.predict(patches, batch_size=16)
         if isinstance(prob, list):
-            if len(resolution) > 1:
-                new_prob = prob[0]
-                for p in prob[1:]:
-                    new_prob = np.hstack((new_prob, p))
-                prob = new_prob
+            if prob_out == "fcn":
+                prob = prob[0]
+            elif prob_out == "dist":
+                prob = prob[1]
             else:
-                if prob_out == "fcn":
-                    prob = prob[0]
-                elif prob_out == "dist":
-                    prob = prob[1]
-                else:
-                    raise ValueError("prob_out is wrong")
+                raise ValueError("prob_out is wrong")
         # elapsed_time += timeit.default_timer() - start_time
         PMC = ProbMapConstructer(
             model_out=prob,
@@ -241,8 +235,8 @@ if __name__ == '__main__':
     for i in range(1, 2):
         dataset = "ips_" + str(i)
         test_model(
-            method="hamming",
-            resolution=[2],
+            method="ce_dist",
+            resolution=[1, 2, 5],
             dataset=dataset,
             in_size=150,
             size=150,
