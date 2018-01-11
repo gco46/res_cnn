@@ -37,18 +37,18 @@ def make_model_name(arch, size, res, fcn=False):
     return model_name
 
 
-data = "melanoma"
+data = "ips"
 
 in_size = 150
-size = [150, 300]
+size = [150]
 step = 45
-resolution = [[2], [5]]
+resolution = [[5]]
 lr = 1e-4
 opt = "Adam"
 batch_size = 16
 epochs = 15
 decay = 0
-l2_reg = 5e-5
+l2_reg = 0
 arch = "vgg_p4"
 
 for s in size:
