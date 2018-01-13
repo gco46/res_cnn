@@ -950,22 +950,28 @@ def sparse_accuracy(y_true, y_pred):
     # K.sum(tf.to_float(legal_labels))
 
 
-def distribution_cross_entropy(resolution):
+def distribution_cross_entropy(resolution, binary=False):
     """
     loss function for distribution cross entropy
-    resolution: int, the resolution of patch
+    resolution: list of int, the resolution of patch
+    binary: bool, if True, y_true is converted to binary(only max label is 1)
     """
     def loss(y_true, y_pred):
-        nb_classes = K.int_shape(y_pred)[-1] // resolution**2
+        num_hist = 0
+        for r in resolution:
+            num_hist += r**2
+        nb_classes = K.int_shape(y_pred)[-1] // num_hist
         y_true = K.reshape(y_true, (-1, nb_classes))
-        # y_true = K.argmax(y_true, axis=-1)
-        # y_true = K.one_hot(y_true, nb_classes)
+        if binary:
+            y_true = K.argmax(y_true, axis=-1)
+            y_true = K.one_hot(y_true, nb_classes)
 
         y_pred = K.reshape(y_pred, (-1, nb_classes))
         log_softmax = tf.nn.log_softmax(y_pred)
         cross_entropy = -K.sum(y_true * log_softmax, axis=1)
-        cross_entropy = K.mean(cross_entropy)
-        return cross_entropy
+        result = K.reshape(cross_entropy, (-1, num_hist))
+        # cross_entropy = K.mean(cross_entropy)
+        return result
     return loss
 
 

@@ -803,7 +803,7 @@ class ProbMapConstructer(object):
     def restore_patchMap(self, prob):
         """
         restore patch map from probabirity.
-        this method is part of 'restore_patchMap'
+        this method is part of 'restore_Map_allRes'
         this method is also used for 'classification' prob map.
         prob: matrix array, (num_samples, num_dims)
 
@@ -815,15 +815,52 @@ class ProbMapConstructer(object):
         tmp_map = np.zeros((self.size, self.size, self.num_classes))
         num_local = prob.shape[1] // self.num_classes
         res = int(np.sqrt(num_local))
-        l_size = self.size // res
         for index in range(prob.shape[0]):  # sample loop
             for y in range(res):            # local resolution loop axis_y
                 for x in range(res):        # local resolution loop axis_x
-                    t = res * y + x
-                    tmp_map[y * l_size:(y + 1) * l_size,
-                            x * l_size:(x + 1) * l_size, :] \
-                        = prob[index,
-                               self.num_classes * t:self.num_classes * (t + 1)
-                               ]
+                    tmp_map = self.make_tmpMap(prob, x, y, res, index, tmp_map)
             result[index, :, :, :] = tmp_map[:, :, :]
         return result
+
+    def make_tmpMap(self, prob, x, y, res, index, tmp_map):
+        """
+        restore local area of map from probabirity.
+        this method is part of 'restore_patchMap'
+        prob: matrix array, (num_samples, num_dims)
+        x: int, index of local area (horizontal axis)
+        y: int, index of local area (vertical axis)
+        res: int, resolution of patch map
+        index: int, the sample index
+        tmp_map: array,    !! pass by reference !!
+
+        output: tmp_map
+        """
+        # sizeがresolutionで割り切れない場合，
+        # patch端を一番近い確率値で埋める
+        l_size, rem = divmod(self.size, res)
+        t = res * y + x
+        if rem > 0:
+            if (x + 1) == res:
+                tmp_map[y * l_size:(y + 1) * l_size, x * l_size:, :] \
+                    = prob[index,
+                           self.num_classes * t:self.num_classes * (t + 1)]
+            elif (y + 1) == res:
+                tmp_map[y * l_size:, x * l_size:(x + 1) * l_size, :] \
+                    = prob[index,
+                           self.num_classes * t:self.num_classes * (t + 1)]
+            elif (x + 1) == res and (y + 1) == res:
+                tmp_map[y * l_size:, x * l_size:, :] \
+                    = prob[index,
+                           self.num_classes * t:self.num_classes * (t + 1)]
+            else:
+                tmp_map[y * l_size:(y + 1) * l_size,
+                        x * l_size:(x + 1) * l_size, :] \
+                    = prob[index,
+                           self.num_classes * t:self.num_classes * (t + 1)]
+        else:
+            tmp_map[y * l_size:(y + 1) * l_size,
+                    x * l_size:(x + 1) * l_size, :] \
+                = prob[index,
+                       self.num_classes * t:self.num_classes * (t + 1)]
+
+        return tmp_map

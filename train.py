@@ -124,11 +124,11 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
 
     # インスタンス化はするが読み込みはあとで行う。
     DataLoader = Patch_DataLoader(
-        img_list, mask_list, in_size, size, step, "hamming", resolution,
+        img_list, mask_list, in_size, size, step, method, resolution,
         border_weight=border_weight
     )
     test_DL = Patch_DataLoader(
-        test_img_list, test_mask_list, in_size, size, step, "hamming",
+        test_img_list, test_mask_list, in_size, size, step, method,
         resolution
     )
 
@@ -162,19 +162,19 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
             raise ValueError("argument 'opt' is wrong.")
     else:
         if opt == "SGD":
-            model.compile(loss=loss_f(resolution[0]),
+            model.compile(loss=loss_f(resolution),
                           optimizer=SGD(lr=lr, momentum=0.9, decay=decay),
                           metrics=[]
                           )
         elif opt == "Adadelta":
             lr = 1.0
             decay = 0
-            model.compile(loss=loss_f(resolution[0]),
+            model.compile(loss=loss_f(resolution),
                           optimizer=Adadelta(),
                           metrics=[]
                           )
         elif opt == "Adam":
-            model.compile(loss=loss_f(resolution[0]),
+            model.compile(loss=loss_f(resolution),
                           optimizer=Adam(lr=lr, decay=decay),
                           metrics=[]
                           )
@@ -418,7 +418,7 @@ if __name__ == '__main__':
         dataset = "ips_" + str(i)
         train_model(
             method="ce_dist",
-            resolution=[5],
+            resolution=[1, 2, 3, 4, 5],
             dataset=dataset,
             in_size=150,
             size=150,
