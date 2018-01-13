@@ -40,9 +40,9 @@ def make_model_name(arch, size, res, fcn=False):
 data = "ips"
 
 in_size = 150
-size = [150]
+size = [150, 300]
 step = 45
-resolution = [[5]]
+resolution = [[1, 2, 5], [1, 2, 3, 4, 5], [10]]
 lr = 1e-4
 opt = "Adam"
 batch_size = 16

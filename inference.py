@@ -236,7 +236,7 @@ if __name__ == '__main__':
         dataset = "ips_" + str(i)
         test_model(
             method="ce_dist",
-            resolution=[1, 2, 5],
+            resolution=[1, 2, 3, 4, 5],
             dataset=dataset,
             in_size=150,
             size=150,
