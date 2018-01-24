@@ -432,11 +432,7 @@ if __name__ == '__main__':
             lr=1e-4,
             epochs=15,
             batch_size=16,
-<<<<<<< HEAD
-            l2_reg=1e-4,
-=======
             l2_reg=5e-5,
->>>>>>> experiment
             decay=0,
             border_weight=None
         )
