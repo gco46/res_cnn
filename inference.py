@@ -233,14 +233,14 @@ def make_vis_dirs(model_path, resolution=None):
 
 
 if __name__ == '__main__':
-    for i in [1, 3]:
+    for i in range(3, 4):
         dataset = "ips_" + str(i)
         test_model(
             method="classification",
             resolution=None,
             dataset=dataset,
             in_size=150,
-            size=150,
+            size=100,
             step=45,
             label_map=False,
             model_path="valid",

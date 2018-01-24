@@ -19,7 +19,8 @@ import timeit
 
 
 def train_model(method, resolution, dataset, in_size, size, step, arch,
-                opt, lr, epochs, batch_size, l2_reg, decay, border_weight):
+                opt, lr, epochs, batch_size, l2_reg, decay, border_weight,
+                binary):
     """
     train models, and save weights and loss graph
     method: str: 'classification', 'regression' or 'fcn'
@@ -161,6 +162,9 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
         else:
             raise ValueError("argument 'opt' is wrong.")
     else:
+        if binary:
+            print("\n method -> ce_dist, binary=True \n")
+
         if opt == "SGD":
             model.compile(loss=loss_f(resolution),
                           optimizer=SGD(lr=lr, momentum=0.9, decay=decay),
@@ -174,7 +178,7 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
                           metrics=[]
                           )
         elif opt == "Adam":
-            model.compile(loss=loss_f(resolution),
+            model.compile(loss=loss_f(resolution, binary),
                           optimizer=Adam(lr=lr, decay=decay),
                           metrics=[]
                           )
@@ -421,14 +425,18 @@ if __name__ == '__main__':
             resolution=None,
             dataset=dataset,
             in_size=150,
-            size=150,
+            size=100,
             step=45,
             arch="vgg_p4",
             opt="Adam",
             lr=1e-4,
             epochs=15,
             batch_size=16,
+<<<<<<< HEAD
             l2_reg=1e-4,
+=======
+            l2_reg=5e-5,
+>>>>>>> experiment
             decay=0,
             border_weight=None
         )
