@@ -40,23 +40,23 @@ def make_model_name(arch, size, res, fcn=False):
 data = "ips"
 
 in_size = 150
-size = [150, 300]
+size = [150]
 step = 45
-resolution = [[1, 2, 5], [1, 2, 3, 4, 5], [10]]
+resolution = [None]
 lr = 1e-4
 opt = "Adam"
 batch_size = 16
 epochs = 15
 decay = 0
-l2_reg = 0
+l2_reg = 1e-4
 arch = "vgg_p4"
 
 for s in size:
     for r in resolution:
         if r is None:
-            method = "fcn"
+            method = "classification"
         else:
-            method = "ce_dist"
+            method = "regression"
         for i in range(1, 6):
             K.clear_session()
             model_name = make_model_name(arch, s, r, fcn=False)

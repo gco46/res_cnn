@@ -413,12 +413,12 @@ def train_fcn_model(dataset, opt, lr, epochs, batch_size, l2_reg, decay,
 
 
 if __name__ == '__main__':
-    for i in range(1, 2):
+    for i in range(3, 4):
         K.clear_session()
         dataset = "ips_" + str(i)
         train_model(
-            method="ce_dist",
-            resolution=[1, 2, 3, 4, 5],
+            method="classification",
+            resolution=None,
             dataset=dataset,
             in_size=150,
             size=150,
@@ -426,9 +426,9 @@ if __name__ == '__main__':
             arch="vgg_p4",
             opt="Adam",
             lr=1e-4,
-            epochs=1,
+            epochs=15,
             batch_size=16,
-            l2_reg=0,
+            l2_reg=1e-4,
             decay=0,
             border_weight=None
         )
