@@ -40,21 +40,21 @@ def make_model_name(arch, size, res, fcn=False):
 data = "ips"
 
 in_size = 150
-size = [150, 300]
+size = [50, 100, 150, 300]
 step = 45
-resolution = [[1, 2, 5], [1, 2, 3, 4, 5], [10]]
+resolution = [[1, 2, 5], [1, 2, 3, 4, 5]]
 lr = 1e-4
 opt = "Adam"
 batch_size = 16
 epochs = 15
 decay = 0
-l2_reg = 0
+l2_reg = 5e-5
 arch = "vgg_p4"
 
 for s in size:
     for r in resolution:
         if r is None:
-            method = "fcn"
+            method = "classification"
         else:
             method = "ce_dist"
         for i in range(1, 6):
@@ -82,7 +82,8 @@ for s in size:
                 batch_size=batch_size,
                 l2_reg=l2_reg,
                 decay=decay,
-                border_weight=None
+                border_weight=None,
+                binary=True
             )
             test_model(
                 method=method,

@@ -232,14 +232,14 @@ def make_vis_dirs(model_path, resolution=None):
 
 
 if __name__ == '__main__':
-    for i in range(1, 2):
+    for i in range(3, 4):
         dataset = "ips_" + str(i)
         test_model(
             method="ce_dist",
             resolution=[1, 2, 3, 4, 5],
             dataset=dataset,
             in_size=150,
-            size=150,
+            size=100,
             step=45,
             model_path="valid",
             prob_out=None
