@@ -11,7 +11,7 @@ from scipy.misc import imresize
 import keras.backend as K
 
 
-def test_model(method, resolution, dataset, in_size, size, step,
+def test_model(method, resolution, dataset, in_size, size, step, label_map,
                model_path="valid", prob_out="fcn"):
     """
     inference
@@ -98,6 +98,7 @@ def test_model(method, resolution, dataset, in_size, size, step,
             step=step,
             origin_h=height,
             origin_w=width,
+            label_map=label_map,
             data=dataset[:-2],
             resolution=resolution
         )
@@ -232,15 +233,16 @@ def make_vis_dirs(model_path, resolution=None):
 
 
 if __name__ == '__main__':
-    for i in range(1, 2):
+    for i in [1, 3]:
         dataset = "ips_" + str(i)
         test_model(
-            method="ce_dist",
-            resolution=[1, 2, 3, 4, 5],
+            method="classification",
+            resolution=None,
             dataset=dataset,
             in_size=150,
             size=150,
             step=45,
+            label_map=False,
             model_path="valid",
             prob_out=None
         )

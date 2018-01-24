@@ -534,6 +534,7 @@ class ProbMapConstructer(object):
                  step=0,
                  origin_h=0,
                  origin_w=0,
+                 label_map=False,
                  data=None,
                  resolution=None):
         """
@@ -555,6 +556,7 @@ class ProbMapConstructer(object):
         self.h = origin_h
         self.w = origin_w
         self.res = resolution
+        self.label_map = label_map
         self.datatype = data
         if data == 'ips':
             self.num_classes = 3
@@ -613,7 +615,10 @@ class ProbMapConstructer(object):
             h[h == 0] = 0.
             h[h == 1] = 1. / 3.
             h[h == 2] = 2. / 3.
-            s = np.max(infmap, axis=2).astype(float)
+            if self.label_map:
+                s = 1.0
+            else:
+                s = np.max(infmap, axis=2).astype(float)
             v = np.ones((infmap.shape[0], infmap.shape[1]))
             # colosysの関数を、ベクトル演算できるように再定義
             hsv_to_rgb = np.vectorize(colorsys.hsv_to_rgb)
