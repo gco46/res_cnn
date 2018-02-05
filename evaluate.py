@@ -20,16 +20,19 @@ def evaluate_model(model, w_path="weights", mode="test"):
     tpr = []
     tnr = []
     accuracy = []
+    class_j = []
     data = model.split("/")[0]
     for i in range(1, 6):
         dataset = data + "_" + str(i)
         # one fold 評価
-        j, d, tp, tn, acc = evaluate_one_fold(model, dataset, w_path, mode)
+        j, d, tp, tn, acc, c_j = evaluate_one_fold(
+            model, dataset, w_path, mode)
         jaccard.append(j)
         dice.append(d)
         tpr.append(tp)
         tnr.append(tn)
         accuracy.append(acc)
+        class_j += list(c_j)
         print(dataset + " is done.")
 
     jaccard = np.asarray(jaccard)
@@ -37,6 +40,7 @@ def evaluate_model(model, w_path="weights", mode="test"):
     tpr = np.asarray(tpr)
     tnr = np.asarray(tnr)
     accuracy = np.asarray(accuracy)
+    class_j = np.asarray(class_j)
     j_mean = np.mean(jaccard)
     j_std = np.std(jaccard)
     d_mean = np.mean(dice)
@@ -47,6 +51,17 @@ def evaluate_model(model, w_path="weights", mode="test"):
     tn_std = np.std(tnr)
     acc_mean = np.mean(accuracy)
     acc_std = np.std(accuracy)
+
+    cj_nonzero = np.zeros((3,))
+    for i in range(3):
+        cj_nonzero[i] = np.count_nonzero(np.ceil(class_j[:, i]))
+
+    cj_mean = np.sum(class_j, axis=0) / cj_nonzero
+    cj_std = np.zeros((3,))
+    for i in range(3):
+        cj_tmp = class_j[np.nonzero(class_j[:, i]), i].reshape(-1)
+        cj_var = np.sum(np.square(cj_tmp - cj_mean[i])) / cj_nonzero[i]
+        cj_std[i] = np.sqrt(cj_var)
     print("model : ", model)
     print("jaccard index : ", j_mean, "+- ", j_std)
     print("dice : ", d_mean, "+- ", d_std)
@@ -58,10 +73,12 @@ def evaluate_model(model, w_path="weights", mode="test"):
                        [d_mean, d_std],
                        [tp_mean, tp_std],
                        [tn_mean, tn_std],
-                       [acc_mean, acc_std]
+                       [acc_mean, acc_std],
                        ])
+    cj_result = np.vstack((cj_mean, cj_std))
 
     np.savetxt(os.path.join(path, "seg_result.txt"), result)
+    np.savetxt(os.path.join(path, "seg_result_class.txt"), cj_result)
 
 
 def evaluate_one_fold(directory, dataset, w_path, mode):
@@ -99,6 +116,7 @@ def evaluate_one_fold(directory, dataset, w_path, mode):
     tpr = []
     tnr = []
     acc = []
+    class_j = []
 
     # インスタンス化するために適当なパスを読み込み
     if "ips" in path:
@@ -120,7 +138,8 @@ def evaluate_one_fold(directory, dataset, w_path, mode):
         # out of region of evaluation
         oor = ~(y_true == 0) * 1
         y_pred = y_pred * oor
-        j, d, tp, tn, a = evaluate_one_image(y_true, y_pred, labels)
+        j, d, tp, tn, a, c_j = evaluate_one_image(y_true, y_pred, labels)
+        class_j.append(c_j)
         jaccard.append(j)
         dice.append(d)
         tpr.append(tp)
@@ -131,7 +150,8 @@ def evaluate_one_fold(directory, dataset, w_path, mode):
     tpr = sum(tpr) / len(tpr)
     tnr = sum(tnr) / len(tnr)
     acc = sum(acc) / len(acc)
-    return jaccard, dice, tpr, tnr, acc
+    class_j = np.asarray(class_j)
+    return jaccard, dice, tpr, tnr, acc, class_j
 
 
 def evaluate_one_image(y_true, y_pred, labels):
@@ -151,6 +171,7 @@ def evaluate_one_image(y_true, y_pred, labels):
     tpr = []
     tnr = []
     acc = []
+    class_j = np.zeros((3,))
     for i in range(len(labels)):
         if mat[i, :].sum() == 0:
             continue
@@ -161,6 +182,7 @@ def evaluate_one_image(y_true, y_pred, labels):
         fp = mat[:, i].sum() - mat[i, i]
         fn = mat[i, :].sum() - mat[i, i]
         jaccard.append(tp / float(tp + fp + fn))
+        class_j[i] = (tp / float(tp + fp + fn))
         dice.append(2 * tp / float(2 * tp + fp + fn))
         tpr.append(tp / float(tp + fn))
         tnr.append(tn / float(fp + tn))
@@ -171,7 +193,7 @@ def evaluate_one_image(y_true, y_pred, labels):
     tpr = sum(tpr) / len(tpr)
     tnr = sum(tnr) / len(tnr)
     acc = sum(acc) / len(acc)
-    return jaccard, dice, tpr, tnr, acc
+    return jaccard, dice, tpr, tnr, acc, class_j
 
 
 if __name__ == '__main__':
