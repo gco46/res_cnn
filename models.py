@@ -13,7 +13,7 @@ from keras.engine.topology import Layer
 from keras.initializers import Constant
 from keras.layers import (Activation, BatchNormalization, Conv2D,
                           Conv2DTranspose, Dense, Dropout, Flatten, Input,
-                          MaxPooling2D, ZeroPadding2D)
+                          MaxPooling2D, ZeroPadding2D, Reshape)
 from keras.layers.merge import Add
 from keras.models import Model, Sequential
 from keras.regularizers import l2
@@ -41,7 +41,7 @@ def bilinear_upsample_weights(factor, n_class):
     return weights
 
 
-def myVGG_p4(size, l2_reg, method, out_num):
+def myVGG_p4(size, l2_reg, method, out_num, test=False):
     if method == "classification":
         out_act = "softmax"
     else:
@@ -92,6 +92,10 @@ def myVGG_p4(size, l2_reg, method, out_num):
     model.add(Dropout(0.5))
     model.add(Dense(out_num, activation=out_act,
                     kernel_regularizer=l2(l2_reg)))
+    if test and method == "ce_dist":
+        model.add(Reshape((-1, 3)))
+        model.add(Activation("softmax"))
+        model.add(Flatten())
 
     return model
 
