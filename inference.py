@@ -11,8 +11,8 @@ from scipy.misc import imresize
 import keras.backend as K
 
 
-def test_model(method, resolution, dataset, in_size, size, step, label_map,
-               model_path="valid", prob_out="fcn"):
+def test_model(method, resolution, dataset, in_size, size, step,
+               label_map=False, model_path="valid", prob_out="fcn"):
     """
     inference
     method: str,
@@ -39,8 +39,12 @@ def test_model(method, resolution, dataset, in_size, size, step, label_map,
     else:
         model_path = "weights/valid_all/dataset_" + dataset[-1]
     try:
-        model = model_from_json(
-            open(os.path.join(model_path, "train_arch.json")).read())
+        out_num = 0
+        for i in resolution:
+            out_num += i**2 * 3
+        model = models.myVGG_p4(in_size, 0, method, out_num, test=True)
+        # model = model_from_json(
+        #     open(os.path.join(model_path, "train_arch.json")).read())
     except FileNotFoundError:
         in_shape = (in_size, in_size, 3)
         if method == "fcn":
@@ -64,11 +68,11 @@ def test_model(method, resolution, dataset, in_size, size, step, label_map,
 
     print("visualize the result of " + dataset)
     # 可視化画像を保存するためのディレクトリ作成
-    make_vis_dirs(model_path, resolution)
+    make_vis_dirs(model_path, [resolution[-1]])
 
-    # elapsed_time = 0.
-    # elapsed_map_time = 0.
-    # p_count = 0
+    elapsed_time = 0.
+    elapsed_map_time = 0.
+    p_count = 0
     for img_path, mask_path in zip(img_list, mask_list):
         # 可視化画像の名前を取得
         file_name = img_path.split("/")[-1]
@@ -79,11 +83,12 @@ def test_model(method, resolution, dataset, in_size, size, step, label_map,
         height = DataLoader.height
         width = DataLoader.width
         patches = patches.reshape(patches.shape[0], in_size, in_size, 3)
-        # p_count += patches.shape[0]
+        p_count += patches.shape[0]
         patches /= 255.
         # 推定
-        # start_time = timeit.default_timer()
+        start_time = timeit.default_timer()
         prob = model.predict(patches, batch_size=16)
+        elapsed_time += timeit.default_timer() - start_time
         if isinstance(prob, list):
             if prob_out == "fcn":
                 prob = prob[0]
@@ -91,7 +96,7 @@ def test_model(method, resolution, dataset, in_size, size, step, label_map,
                 prob = prob[1]
             else:
                 raise ValueError("prob_out is wrong")
-        # elapsed_time += timeit.default_timer() - start_time
+        prob = prob[:, -resolution[-1]**2 * 3:]
         PMC = ProbMapConstructer(
             model_out=prob,
             size=size,
@@ -100,14 +105,18 @@ def test_model(method, resolution, dataset, in_size, size, step, label_map,
             origin_w=width,
             label_map=label_map,
             data=dataset[:-2],
-            resolution=resolution
+            resolution=[resolution[-1]]
         )
+        elapsed_map_time += timeit.default_timer() - start_time
         PMC.save_InfMap(model_path, file_name)
-        # elapsed_map_time += timeit.default_timer() - start_time
-    # test_time = elapsed_time / p_count
-    # test_map_time = elapsed_map_time / len(img_list)
-    # print("test on %s takes %.7f s" % (dataset, test_time))
-    # print("test on %s takes %.7f s" % (dataset, test_map_time))
+    test_time = elapsed_time / len(img_list)
+    test_time_p = elapsed_time / p_count
+    test_map_time = elapsed_map_time / len(img_list)
+    time_array = np.array([test_time, test_time_p, test_map_time])
+    print("test on %s takes %.7f s" % (dataset, test_time))
+    print("test on %s takes %.7f s" % (dataset, test_time_p))
+    print("test on %s takes %.7f s" % (dataset, test_map_time))
+    np.savetxt(os.path.join(model_path, "test_time.txt"), time_array)
 
 
 def test_fcn_model(dataset, img_size, resize_input=False, model_path="valid"):
@@ -233,19 +242,64 @@ def make_vis_dirs(model_path, resolution=None):
 
 
 if __name__ == '__main__':
-    for i in range(3, 4):
-        dataset = "ips_" + str(i)
-        test_model(
-            method="classification",
-            resolution=None,
-            dataset=dataset,
-            in_size=150,
-            size=100,
-            step=45,
-            label_map=False,
-            model_path="valid",
-            prob_out=None
-        )
+    params = [
+        # ("ips/ce_dist/Adam/l2=0/vgg_p4_size100", 100, [1]),
+        # ("ips/ce_dist/Adam/l2=0/vgg_p4_size100_res2-2", 100, [2]),
+        # ("ips/ce_dist/Adam/l2=0/vgg_p4_size100_res5-5", 100, [5]),
+        # ("ips/ce_dist/Adam/l2=0/vgg_p4_size100_res125", 100, [1, 2, 5]),
+        ("ips/ce_dist/Adam/l2=5e-5/vgg_p4_size100_res12345", 100, [1, 2, 3, 4, 5]),
+        ("ips/ce_dist/Adam/l2=5e-5/vgg_p4_size150", 150, [1]),
+        ("ips/ce_dist/Adam/l2=5e-5/vgg_p4_size150_res2-2", 150, [2]),
+        ("ips/ce_dist/Adam/l2=0/vgg_p4_size150_res5-5", 150, [5]),
+        ("ips/ce_dist/Adam/l2=0/vgg_p4_size150_res125", 150, [1, 2, 5]),
+        ("ips/ce_dist/Adam/l2=0/vgg_p4_size150_res12345",
+         150, [1, 2, 3, 4, 5]),
+        ("ips/ce_dist/Adam/l2=0/vgg_p4_size300", 300, [1]),
+        ("ips/ce_dist/Adam/l2=0/vgg_p4_size300_res2-2", 300, [2]),
+        ("ips/ce_dist/Adam/l2=0/vgg_p4_size300_res5-5", 300, [5]),
+        ("ips/ce_dist/Adam/l2=0/vgg_p4_size300_res125", 300, [1, 2, 5]),
+        ("ips/ce_dist/Adam/l2=0/vgg_p4_size300_res12345",
+         300, [1, 2, 3, 4, 5]),
+        ("ips/classification_max/Adam/l2=5e-5/vgg_p4_size50_res125",
+         50, [1, 2, 5]),
+        ("ips/classification_max/Adam/l2=5e-5/vgg_p4_size50_res12345",
+         50, [1, 2, 3, 4, 5]),
+        ("ips/classification_max/Adam/l2=5e-5/vgg_p4_size100_res125",
+         100, [1, 2, 5]),
+        ("ips/classification_max/Adam/l2=5e-5/vgg_p4_size100_res12345",
+         100, [1, 2, 3, 4, 5]),
+        ("ips/classification_max/Adam/l2=0/vgg_p4_size150_res125",
+         150, [1, 2, 5]),
+        ("ips/classification_max/Adam/l2=0/vgg_p4_size150_res12345",
+         150, [1, 2, 3, 4, 5]),
+        ("ips/classification_max/Adam/l2=0/vgg_p4_size300_res125",
+         300, [1, 2, 5]),
+        ("ips/classification_max/Adam/l2=0/vgg_p4_size300_res12345",
+         300, [1, 2, 3, 4, 5]),
+    ]
+    for m_path, size, res in params:
+        K.clear_session()
+        test_time = []
+        for i in range(1, 6):
+            dataset = "ips_" + str(i)
+            test_model(
+                method="ce_dist",
+                resolution=res,
+                dataset=dataset,
+                in_size=150,
+                size=size,
+                step=45,
+                label_map=False,
+                model_path=m_path,
+                prob_out=None
+            )
+            tmp = np.loadtxt(
+                os.path.join("weights", m_path, "dataset_" + str(i), "test_time.txt"),
+                )
+            test_time.append(list(tmp))
+        test_time = np.array(test_time)
+        np.savetxt(os.path.join("weights", m_path, "test_time.txt"), test_time)
+
     # for i in range(1, 6):
     #     dataset = "melanoma_" + str(i)
     #     test_fcn_model(
