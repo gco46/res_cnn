@@ -426,7 +426,7 @@ def FCN_8s_norm(classes, in_shape, l2_reg, nopad=False):
     return model
 
 
-def FCN_8s(classes, in_shape, l2_reg, nopad=False):
+def FCN_8s(classes, in_shape, l2_reg, nopad=False, test=False):
     """
     VGG16 based FCN model,
     classes: int, number of classes
@@ -605,6 +605,8 @@ def FCN_8s(classes, in_shape, l2_reg, nopad=False):
                         ))(score_p345)
 
     x = CroppingLike2D(K.int_shape(inputs))(x)
+    if test:
+        x = Activation("softmax")(x)
     model = Model(inputs=inputs, outputs=x)
     return model
 
