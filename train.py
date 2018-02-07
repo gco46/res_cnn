@@ -303,7 +303,7 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
 
 
 def train_fcn_model(dataset, opt, lr, epochs, batch_size, l2_reg, decay,
-                    img_size, resize_input=False, resolution=None):
+                    img_size, m_path=None, resize_input=False):
     """
     train fcn with whole image.
     dataset: str, "ips" or "melanoma" + 1 - 5
@@ -333,6 +333,13 @@ def train_fcn_model(dataset, opt, lr, epochs, batch_size, l2_reg, decay,
     dir_path = os.path.join("weights/valid_all/dataset_" + str(n))
 
     model = models.FCN_8s(num_classes, (in_h, in_w, 3), l2_reg)
+    if m_path is not None:
+        m_name = m_path.split("/")[-1]
+        m_path = "weights/" + m_path
+        print("\n <<< start from ", m_name, " >>>")
+        model.load_weights(
+            os.path.join(m_path, "dataset_" + str(n), "train_weights.h5")
+        )
 
     metrics = sparse_accuracy
     loss_f = softmax_sparse_crossentropy
@@ -371,7 +378,7 @@ def train_fcn_model(dataset, opt, lr, epochs, batch_size, l2_reg, decay,
     hist = model.fit(X_train, y_train,
                      batch_size=batch_size,
                      epochs=epochs,
-                     #  validation_data=(X_test, y_test),
+                     validation_data=(X_test, y_test),
                      verbose=1)
     elapsed_time = (timeit.default_timer() - start_time) / 60.
     print("train on %s takes %.2f m" % (dataset, elapsed_time))
@@ -397,6 +404,7 @@ def train_fcn_model(dataset, opt, lr, epochs, batch_size, l2_reg, decay,
         file.write("lr:" + str(lr) + "\n")
         file.write("epochs:" + str(epochs) + "\n")
         file.write("batch_size:" + str(batch_size) + "\n")
+        file.write("l2_reg:" + str(l2_reg) + "\n")
         file.write("TrainingTime:%.2f m\n" % elapsed_time)
 
     # train loss だけプロットして保存
@@ -417,36 +425,37 @@ def train_fcn_model(dataset, opt, lr, epochs, batch_size, l2_reg, decay,
 
 
 if __name__ == '__main__':
-    for i in range(3, 4):
-        K.clear_session()
-        dataset = "ips_" + str(i)
-        train_model(
-            method="classification",
-            resolution=None,
-            dataset=dataset,
-            in_size=150,
-            size=100,
-            step=45,
-            arch="vgg_p4",
-            opt="Adam",
-            lr=1e-4,
-            epochs=15,
-            batch_size=16,
-            l2_reg=5e-5,
-            decay=0,
-            border_weight=None
-        )
-    # for i in range(5, 6):
+    # for i in range(3, 4):
     #     K.clear_session()
-    #     dataset = "melanoma_" + str(i)
-    #     train_fcn_model(
+    #     dataset = "ips_" + str(i)
+    #     train_model(
+    #         method="classification",
+    #         resolution=None,
     #         dataset=dataset,
+    #         in_size=150,
+    #         size=100,
+    #         step=45,
+    #         arch="vgg_p4",
     #         opt="Adam",
-    #         lr=1e-5,
-    #         epochs=50,
-    #         batch_size=1,
+    #         lr=1e-4,
+    #         epochs=15,
+    #         batch_size=16,
     #         l2_reg=5e-5,
     #         decay=0,
-    #         img_size=(1000, 1000),
-    #         resize_input=False
+    #         border_weight=None
     #     )
+    for i in range(1, 6):
+        K.clear_session()
+        dataset = "ips_" + str(i)
+        train_fcn_model(
+            dataset=dataset,
+            opt="Adam",
+            lr=1e-5,
+            epochs=100,
+            batch_size=1,
+            l2_reg=1e-4,
+            decay=0,
+            img_size=(900, 1200),
+            m_path="ips/fcn_image/Adam/epoch=100_l2=1e-4",
+            resize_input=True
+        )
