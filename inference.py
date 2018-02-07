@@ -142,7 +142,7 @@ def test_fcn_model(dataset, img_size, resize_input=False, model_path="valid"):
         model = model_from_json(
             open(os.path.join(model_path, "train_arch.json")).read())
     except FileNotFoundError:
-        model = models.FCN_8s(num_classes, (in_h, in_w, 3), 0)
+        model = models.FCN_8s(num_classes, (in_h, in_w, 3), 0, test=True)
     model.load_weights(os.path.join(model_path, "train_weights.h5"))
 
     # データ読み込み
