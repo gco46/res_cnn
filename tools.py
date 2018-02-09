@@ -167,7 +167,7 @@ class Patch_DataLoader(object):
                 for j in range((w - size) // step + 1):
                     m_patch = mask[i * step:(i * step) + size,
                                    j * step:(j * step) + size]
-                    t = self.calcTarget(m_patch)
+                    t, _ = self.calcTarget(m_patch)
                     if not isinstance(t, bool):
                         num_samples += 1
         return num_samples
