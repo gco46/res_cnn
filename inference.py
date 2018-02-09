@@ -275,15 +275,15 @@ if __name__ == '__main__':
         # test_time = np.array(test_time)
         # np.savetxt(os.path.join("weights", m_path, "test_time.txt"), test_time)
 
-    for i in range(1, 2):
+    for i in [2, 3, 5]:
         K.clear_session()
         dataset = "ips_" + str(i)
         test_model(
-            method="ce_dist",
-            resolution=[1, 2, 5],
+            method="classification",
+            resolution=None,
             dataset=dataset,
             in_size=150,
-            size=250,
+            size=300,
             step=45,
             label_map=False,
             model_path="valid",
@@ -291,10 +291,10 @@ if __name__ == '__main__':
         )
 
     # for i in range(1, 6):
-    #     dataset = "melanoma_" + str(i)
+    #     dataset = "ips_" + str(i)
     #     test_fcn_model(
     #         dataset=dataset,
-    #         img_size=(1000, 1000),
-    #         resize_input=False,
+    #         img_size=(900, 1200),
+    #         resize_input=True,
     #         model_path="valid"
     #     )

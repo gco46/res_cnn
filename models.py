@@ -18,6 +18,7 @@ from keras.layers.merge import Add
 from keras.models import Model, Sequential
 from keras.regularizers import l2
 from keras.utils import conv_utils
+from keras.applications.vgg16 import VGG16
 
 
 def bilinear_upsample_weights(factor, n_class):
@@ -426,6 +427,123 @@ def FCN_8s_norm(classes, in_shape, l2_reg, nopad=False):
     return model
 
 
+def FCN_VGG16(classes, in_shape, l2_reg, nopad=False, test=False):
+    vgg16 = VGG16(include_top=False, weights="imagenet", input_shape=in_shape)
+    inputs = Input(shape=in_shape)
+    if nopad:
+        x = inputs
+    else:
+        x = ZeroPadding2D(padding=(100, 100))(inputs)
+    for layer in vgg16.layers[1:]:
+        if "conv" in layer.name:
+            W, b = layer.get_weights()
+            config = layer.get_config()
+            config["kernel_regularizer"] = l2(l2_reg)
+            config["kernel_initializer"] = Constant(W)
+            config["bias_initializer"] = Constant(b)
+            conv = Conv2D.from_config(config)
+            x = conv(x)
+        elif "pool" in layer.name:
+            x = MaxPooling2D()(x)
+
+        if layer.name == "block3_pool":
+            feat3 = x
+        elif layer.name == "block4_pool":
+            feat4 = x
+    x = Conv2D(filters=4096,
+               kernel_size=(7, 7),
+               padding="valid",
+               activation="relu",
+               kernel_regularizer=l2(l2_reg),
+               name="fc1")(x)
+    x = Dropout(0.5)(x)
+    x = Conv2D(filters=4096,
+               kernel_size=(1, 1),
+               padding="valid",
+               activation="relu",
+               kernel_regularizer=l2(l2_reg),
+               name="fc2")(x)
+    x = Dropout(0.5)(x)
+
+    score5 = Conv2D(filters=classes,
+                    kernel_size=(1, 1),
+                    kernel_regularizer=l2(l2_reg),
+                    activation="relu")(x)
+
+    if nopad:
+        score5 = Conv2DTranspose(filters=classes,
+                                 kernel_size=(14, 14),
+                                 strides=(1, 1),
+                                 padding="valid",
+                                 activation="linear",
+                                 kernel_regularizer=l2(l2_reg),
+                                 kernel_initializer=Constant(
+                                     bilinear_upsample_weights(
+                                         "full", classes)
+                                 ))(score5)
+    else:
+        score5 = Conv2DTranspose(filters=classes,
+                                 kernel_size=(4, 4),
+                                 strides=(2, 2),
+                                 padding="same",
+                                 activation="linear",
+                                 kernel_regularizer=l2(l2_reg),
+                                 kernel_initializer=Constant(
+                                     bilinear_upsample_weights(2, classes)
+                                 ))(score5)
+
+    # pool3 のfeature mapを次元圧縮
+    score3 = Conv2D(filters=classes,
+                    kernel_size=(1, 1),
+                    kernel_regularizer=l2(l2_reg),
+                    activation='relu')(feat3)
+    # pool4のfeature mapを次元圧縮
+    score4 = Conv2D(filters=classes,
+                    kernel_size=(1, 1),
+                    kernel_regularizer=l2(l2_reg),
+                    activation="relu")(feat4)
+
+    # merge p4 and p5
+    score4 = CroppingLike2D(K.int_shape(score5))(score4)
+    score45 = Add()([score4, score5])
+
+    # p4+p5 を x2 upsampling
+    if not nopad:
+        score45 = ZeroPadding2D(padding=(1, 1))(score45)
+    score45 = Conv2DTranspose(filters=classes,
+                              kernel_size=(4, 4),
+                              strides=(2, 2),
+                              padding="same",
+                              activation="linear",
+                              kernel_regularizer=l2(l2_reg),
+                              kernel_initializer=Constant(
+                                  bilinear_upsample_weights(2, classes)
+                              ))(score45)
+
+    # p3とp45をmerge
+    score3 = CroppingLike2D(K.int_shape(score45))(score3)
+    score345 = Add()([score3, score45])
+
+    # p3+p4+p5を x8 upsampling
+    if not nopad:
+        score345 = ZeroPadding2D(padding=(1, 1))(score345)
+    x = Conv2DTranspose(filters=classes,
+                        kernel_size=(16, 16),
+                        strides=(8, 8),
+                        padding="same",
+                        activation="linear",
+                        kernel_regularizer=l2(l2_reg),
+                        kernel_initializer=Constant(
+                            bilinear_upsample_weights(8, classes)
+                        ))(score345)
+
+    x = CroppingLike2D(K.int_shape(inputs))(x)
+    if test:
+        x = Activation("softmax")(x)
+    model = Model(inputs=inputs, outputs=x)
+    return model
+
+
 def FCN_8s(classes, in_shape, l2_reg, nopad=False, test=False):
     """
     VGG16 based FCN model,
@@ -803,7 +921,8 @@ class CroppingLike2D(Layer):
     def __init__(self, target_shape, offset=None, data_format=None,
                  **kwargs):
         """Crop to target.
-        If only one `offset` is set, then all dimensions are offset by this amount.
+        If only one `offset` is set, then all dimensions are offset by 
+        this amount.
         """
         super(CroppingLike2D, self).__init__(**kwargs)
         self.data_format = conv_utils.normalize_data_format(data_format)

@@ -95,6 +95,11 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
         print("arch : ", arch)
         in_shape = (in_size, in_size, 3)
         model = models.FCN_8s(num_classes, in_shape, l2_reg, nopad=True)
+    elif method == "fcn_pre":
+        arch = "FCN_VGG16"
+        print("arch : ", arch)
+        in_shape = (in_size, in_size, 3)
+        model = models.FCN_VGG16(num_classes, in_shape, l2_reg, nopad=True)
     elif method == "fcn_norm":
         arch = "FCN_8s_norm"
         print("arch : ", arch)
@@ -303,7 +308,8 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
 
 
 def train_fcn_model(dataset, opt, lr, epochs, batch_size, l2_reg, decay,
-                    img_size, m_path=None, resize_input=False):
+                    img_size, m_path=None, resize_input=False,
+                    pre_train=False):
     """
     train fcn with whole image.
     dataset: str, "ips" or "melanoma" + 1 - 5
@@ -332,7 +338,10 @@ def train_fcn_model(dataset, opt, lr, epochs, batch_size, l2_reg, decay,
         pass
     dir_path = os.path.join("weights/valid_all/dataset_" + str(n))
 
-    model = models.FCN_8s(num_classes, (in_h, in_w, 3), l2_reg)
+    if pre_train:
+        model = models.FCN_VGG16(num_classes, (in_h, in_w, 3), l2_reg)
+    else:
+        model = models.FCN_8s(num_classes, (in_h, in_w, 3), l2_reg)
     if m_path is not None:
         m_name = m_path.split("/")[-1]
         m_path = "weights/" + m_path
@@ -425,37 +434,38 @@ def train_fcn_model(dataset, opt, lr, epochs, batch_size, l2_reg, decay,
 
 
 if __name__ == '__main__':
-    # for i in range(3, 4):
-    #     K.clear_session()
-    #     dataset = "ips_" + str(i)
-    #     train_model(
-    #         method="classification",
-    #         resolution=None,
-    #         dataset=dataset,
-    #         in_size=150,
-    #         size=100,
-    #         step=45,
-    #         arch="vgg_p4",
-    #         opt="Adam",
-    #         lr=1e-4,
-    #         epochs=15,
-    #         batch_size=16,
-    #         l2_reg=5e-5,
-    #         decay=0,
-    #         border_weight=None
-    #     )
     for i in range(1, 6):
         K.clear_session()
         dataset = "ips_" + str(i)
-        train_fcn_model(
+        train_model(
+            method="classification",
+            resolution=None,
             dataset=dataset,
+            in_size=150,
+            size=300,
+            step=45,
+            arch="vgg_p4",
             opt="Adam",
-            lr=1e-5,
-            epochs=100,
-            batch_size=1,
-            l2_reg=1e-4,
+            lr=1e-4,
+            epochs=15,
+            batch_size=16,
+            l2_reg=5e-5,
             decay=0,
-            img_size=(900, 1200),
-            m_path="ips/fcn_image/Adam/epoch=100_l2=1e-4",
-            resize_input=True
+            border_weight=None,
+            binary=False
         )
+    # for i in range(1, 6):
+    #     K.clear_session()
+    #     dataset = "ips_" + str(i)
+    #     train_fcn_model(
+    #         dataset=dataset,
+    #         opt="Adam",
+    #         lr=1e-5,
+    #         epochs=100,
+    #         batch_size=1,
+    #         l2_reg=1e-4,
+    #         decay=0,
+    #         img_size=(900, 1200),
+    #         m_path="ips/fcn_image/Adam/epoch=100_l2=1e-4",
+    #         resize_input=True
+    #     )
