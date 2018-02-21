@@ -23,10 +23,10 @@ def test_model(method, resolution, dataset, in_size, size, step,
     model_path: str, path to model path you want to test
     """
     if not method in ['regression', 'classification', 'fcn', 'fcn_norm',
-                      'fcn_dist', 'ce_dist', 'hamming', 'fcn_pre']:
+                      'fcn_dist', 'ce_dist', 'hamming', 'fcn_pre', 'sigmoid']:
         raise ValueError()
 
-    if method not in ["regression", "fcn_dist", "ce_dist", "hamming"]:
+    if method not in ["regression", "fcn_dist", "ce_dist", "hamming", "sigmoid"]:
         resolution = None
 
     if 'ips' in dataset:
@@ -71,7 +71,7 @@ def test_model(method, resolution, dataset, in_size, size, step,
 
     print("visualize the result of " + dataset)
     # 可視化画像を保存するためのディレクトリ作成
-    if method == "ce_dist" and len(resolution) > 1:
+    if method == "regression" and len(resolution) > 1:
         resolution = [resolution[-1]]
     make_vis_dirs(model_path, resolution)
 
@@ -101,7 +101,7 @@ def test_model(method, resolution, dataset, in_size, size, step,
                 prob = prob[1]
             else:
                 raise ValueError("prob_out is wrong")
-        if method == "ce_dist" and len(resolution) > 1:
+        if method == "regression" and len(resolution) > 1:
             prob = prob[:, -resolution[-1]**2 * 3:]
         PMC = ProbMapConstructer(
             model_out=prob,
@@ -248,47 +248,50 @@ def make_vis_dirs(model_path, resolution=None):
 
 
 if __name__ == '__main__':
-    # params = [
-    #     ("ips/ce_dist/Adam/vgg_p4_size250_res125", 250),
-    # ]
-    # for m_path, size in params:
-    #     K.clear_session()
-    #     test_time = []
-    #     for i in range(1, 6):
-    #         dataset = "ips_" + str(i)
-    #         test_model(
-    #             method="ce_dist",
-    #             resolution=[1, 2, 5],
-    #             dataset=dataset,
-    #             in_size=150,
-    #             size=size,
-    #             step=45,
-    #             label_map=False,
-    #             model_path=m_path,
-    #             prob_out=None
-    #         )
-
-        #     tmp = np.loadtxt(
-        #         os.path.join("weights", m_path, "dataset_" + str(i), "test_time.txt"),
-        #         )
-        #     test_time.append(list(tmp))
-        # test_time = np.array(test_time)
-        # np.savetxt(os.path.join("weights", m_path, "test_time.txt"), test_time)
-
-    for i in range(1, 6):
+    params = [
+        ("ips/regression/Adam/l2=5e-5/vgg_p4_size100_res125", 100, [1, 2, 5]),
+        ("ips/regression/Adam/l2=5e-5/vgg_p4_size150_res125", 150, [1, 2, 5]),
+        ("ips/regression/Adam/l2=5e-5/vgg_p4_size300_res125", 300, [1, 2, 5]),
+    ]
+    for m_path, size, res in params:
         K.clear_session()
-        dataset = "ips_" + str(i)
-        test_model(
-            method="regression",
-            resolution=[2],
-            dataset=dataset,
-            in_size=150,
-            size=150,
-            step=45,
-            label_map=False,
-            model_path="ips/regression/Adam/vgg_p4_size300_res2-2",
-            prob_out=None
-        )
+        test_time = []
+        for i in range(1, 6):
+            dataset = "ips_" + str(i)
+            test_model(
+                method="regression",
+                resolution=res,
+                dataset=dataset,
+                in_size=150,
+                size=size,
+                step=45,
+                label_map=False,
+                model_path=m_path,
+                prob_out=None
+            )
+
+            tmp = np.loadtxt(
+                os.path.join("weights", m_path, "dataset_" +
+                             str(i), "test_time.txt"),
+            )
+            test_time.append(list(tmp))
+        test_time = np.array(test_time)
+        np.savetxt(os.path.join("weights", m_path, "test_time.txt"), test_time)
+
+    # for i in range(1, 6):
+    #     K.clear_session()
+    #     dataset = "ips_" + str(i)
+    #     test_model(
+    #         method="regression",
+    #         resolution=[2],
+    #         dataset=dataset,
+    #         in_size=150,
+    #         size=150,
+    #         step=45,
+    #         label_map=False,
+    #         model_path="ips/regression/Adam/vgg_p4_size100_res2-2",
+    #         prob_out=None
+    #     )
 
     # for i in range(1, 6):
     #     dataset = "ips_" + str(i)

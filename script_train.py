@@ -40,15 +40,15 @@ def make_model_name(arch, size, res, fcn=False):
 data = "ips"
 
 in_size = 150
-size = [50, 100, ]
+size = [100]
 step = 45
-resolution = [None]
+resolution = [[2]]
 lr = 1e-4
 opt = "Adam"
 batch_size = 16
-epochs = 15
+epochs = 1
 decay = 0
-l2_reg = 1e-4
+l2_reg = 0
 arch = "vgg_p4"
 
 for s in size:
@@ -57,7 +57,7 @@ for s in size:
             method = "fcn"
             in_size = 224
         else:
-            method = "ce_dist"
+            method = "sigmoid"
             in_size = 150
         for i in range(1, 6):
             K.clear_session()
@@ -88,7 +88,7 @@ for s in size:
                 l2_reg=l2_reg,
                 decay=decay,
                 border_weight=None,
-                binary=True
+                binary=False
             )
             test_model(
                 method=method,
