@@ -434,38 +434,39 @@ def train_fcn_model(dataset, opt, lr, epochs, batch_size, l2_reg, decay,
 
 
 if __name__ == '__main__':
-    for i in range(1, 6):
-        K.clear_session()
-        dataset = "ips_" + str(i)
-        train_model(
-            method="classification",
-            resolution=None,
-            dataset=dataset,
-            in_size=150,
-            size=300,
-            step=45,
-            arch="vgg_p4",
-            opt="Adam",
-            lr=1e-4,
-            epochs=15,
-            batch_size=16,
-            l2_reg=5e-5,
-            decay=0,
-            border_weight=None,
-            binary=False
-        )
     # for i in range(1, 6):
     #     K.clear_session()
     #     dataset = "ips_" + str(i)
-    #     train_fcn_model(
+    #     train_model(
+    #         method="classification",
+    #         resolution=None,
     #         dataset=dataset,
+    #         in_size=150,
+    #         size=300,
+    #         step=45,
+    #         arch="vgg_p4",
     #         opt="Adam",
-    #         lr=1e-5,
-    #         epochs=100,
-    #         batch_size=1,
-    #         l2_reg=1e-4,
+    #         lr=1e-4,
+    #         epochs=15,
+    #         batch_size=16,
+    #         l2_reg=5e-5,
     #         decay=0,
-    #         img_size=(900, 1200),
-    #         m_path="ips/fcn_image/Adam/epoch=100_l2=1e-4",
-    #         resize_input=True
+    #         border_weight=None,
+    #         binary=False
     #     )
+    for i in range(4, 6):
+        K.clear_session()
+        dataset = "ips_" + str(i)
+        train_fcn_model(
+            dataset=dataset,
+            opt="Adam",
+            lr=1e-5,
+            epochs=100,
+            batch_size=1,
+            l2_reg=5e-4,
+            decay=0,
+            img_size=(900, 1200),
+            m_path="ips/fcn_image/Adam/pre_epoch=200_l2=5e-4",
+            resize_input=True,
+            pre_train=True
+        )

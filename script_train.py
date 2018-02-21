@@ -40,15 +40,15 @@ def make_model_name(arch, size, res, fcn=False):
 data = "ips"
 
 in_size = 150
-size = [50, 100, ]
+size = [100, 150, 300]
 step = 45
-resolution = [None]
+resolution = [[2]]
 lr = 1e-4
 opt = "Adam"
 batch_size = 16
 epochs = 15
 decay = 0
-l2_reg = 1e-4
+l2_reg = 0
 arch = "vgg_p4"
 
 for s in size:
@@ -57,7 +57,7 @@ for s in size:
             method = "fcn"
             in_size = 224
         else:
-            method = "ce_dist"
+            method = "regression"
             in_size = 150
         for i in range(1, 6):
             K.clear_session()
@@ -78,7 +78,7 @@ for s in size:
                 resolution=r,
                 dataset=dataset,
                 in_size=in_size,
-                size=s,
+                size=150,
                 step=step,
                 arch=arch,
                 opt=opt,
@@ -95,7 +95,7 @@ for s in size:
                 resolution=r,
                 dataset=dataset,
                 in_size=in_size,
-                size=s,
+                size=150,
                 step=step,
                 label_map=False
             )
