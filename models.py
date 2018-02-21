@@ -45,6 +45,8 @@ def bilinear_upsample_weights(factor, n_class):
 def myVGG_p4(size, l2_reg, method, out_num, test=False):
     if method == "classification":
         out_act = "softmax"
+    elif method == "sigmoid":
+        out_act = "sigmoid"
     else:
         out_act = "linear"
     model = Sequential()

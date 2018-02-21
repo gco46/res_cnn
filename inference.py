@@ -23,10 +23,10 @@ def test_model(method, resolution, dataset, in_size, size, step,
     model_path: str, path to model path you want to test
     """
     if not method in ['regression', 'classification', 'fcn', 'fcn_norm',
-                      'fcn_dist', 'ce_dist', 'hamming']:
+                      'fcn_dist', 'ce_dist', 'hamming', 'sigmoid']:
         raise ValueError()
 
-    if method not in ["regression", "fcn_dist", "ce_dist", "hamming"]:
+    if method not in ["regression", "fcn_dist", "ce_dist", "hamming", "sigmoid"]:
         resolution = None
 
     if 'ips' in dataset:
@@ -114,7 +114,7 @@ def test_model(method, resolution, dataset, in_size, size, step,
             resolution=resolution
         )
         elapsed_map_time += timeit.default_timer() - start_time
-        # PMC.save_InfMap(model_path, file_name)
+        PMC.save_InfMap(model_path, file_name)
     test_time = elapsed_time / len(img_list)
     test_time_p = elapsed_time / p_count
     test_map_time = elapsed_map_time / len(img_list)
@@ -189,7 +189,7 @@ def test_fcn_model(dataset, img_size, resize_input=False, model_path="valid"):
         else:
             result = pred[0, ...]
         PMC = ProbMapConstructer(result, data=dataset[:-2])
-        # PMC.save_InfMap(model_path, file_name)
+        PMC.save_InfMap(model_path, file_name)
     test_time = elapsed_time / len(img_list)
     print("test on %s takes %.7f m" % (dataset, test_time))
 

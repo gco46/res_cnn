@@ -95,7 +95,7 @@ def make_fcn_input(in_w, in_h, num_classes, dataset, resize_input, mode):
 
 class Patch_DataLoader(object):
     label_d = {'ips': (0, 1, 2, 3), 'melanoma': (0, 1)}
-    dist_method = ["regression", "ce_dist", "fcn_dist", "hamming"]
+    dist_method = ["regression", "ce_dist", "fcn_dist", "hamming", "sigmoid"]
     # in train phase
     # ips: good -> 0, bad -> 1, bgd -> 2, others -> 3
     # melanoma: background -> 0, tumor -> 1
