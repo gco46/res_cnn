@@ -40,13 +40,13 @@ def make_model_name(arch, size, res, fcn=False):
 data = "ips"
 
 in_size = 150
-size = [100, 150, 300]
+size = [100]
 step = 45
 resolution = [[2]]
 lr = 1e-4
 opt = "Adam"
 batch_size = 16
-epochs = 15
+epochs = 1
 decay = 0
 l2_reg = 0
 arch = "vgg_p4"
@@ -57,7 +57,7 @@ for s in size:
             method = "fcn"
             in_size = 224
         else:
-            method = "regression"
+            method = "sigmoid"
             in_size = 150
         for i in range(1, 6):
             K.clear_session()
@@ -78,7 +78,7 @@ for s in size:
                 resolution=r,
                 dataset=dataset,
                 in_size=in_size,
-                size=150,
+                size=s,
                 step=step,
                 arch=arch,
                 opt=opt,
@@ -88,14 +88,14 @@ for s in size:
                 l2_reg=l2_reg,
                 decay=decay,
                 border_weight=None,
-                binary=True
+                binary=False
             )
             test_model(
                 method=method,
                 resolution=r,
                 dataset=dataset,
                 in_size=in_size,
-                size=150,
+                size=s,
                 step=step,
                 label_map=False
             )
