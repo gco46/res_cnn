@@ -23,7 +23,7 @@ def test_model(method, resolution, dataset, in_size, size, step,
     model_path: str, path to model path you want to test
     """
     if not method in ['regression', 'classification', 'fcn', 'fcn_norm',
-                      'fcn_dist', 'ce_dist', 'hamming']:
+                      'fcn_dist', 'ce_dist', 'hamming', 'fcn_pre']:
         raise ValueError()
 
     if method not in ["regression", "fcn_dist", "ce_dist", "hamming"]:
@@ -49,7 +49,7 @@ def test_model(method, resolution, dataset, in_size, size, step,
                 open(os.path.join(model_path, "train_arch.json")).read())
     except FileNotFoundError:
         in_shape = (in_size, in_size, 3)
-        if method == "fcn":
+        if method == "fcn" or method == "fcn_pre":
             model = models.FCN_8s(num_classes, in_shape, 0, nopad=True,
                                   test=True)
         elif method == "fcn_norm":
@@ -275,18 +275,18 @@ if __name__ == '__main__':
         # test_time = np.array(test_time)
         # np.savetxt(os.path.join("weights", m_path, "test_time.txt"), test_time)
 
-    for i in [2, 3, 5]:
+    for i in range(1, 6):
         K.clear_session()
         dataset = "ips_" + str(i)
         test_model(
-            method="classification",
-            resolution=None,
+            method="regression",
+            resolution=[2],
             dataset=dataset,
             in_size=150,
-            size=300,
+            size=150,
             step=45,
             label_map=False,
-            model_path="valid",
+            model_path="ips/regression/Adam/vgg_p4_size300_res2-2",
             prob_out=None
         )
 

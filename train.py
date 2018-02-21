@@ -41,7 +41,7 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
 
     output: None
     """
-    m_list = ['regression', 'classification', 'fcn',
+    m_list = ['regression', 'classification', 'fcn', "fcn_pre",
               'fcn_norm', 'ce_dist', 'fcn_dist', 'hamming']
     if method not in m_list:
         raise ValueError()
@@ -97,6 +97,7 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
         model = models.FCN_8s(num_classes, in_shape, l2_reg, nopad=True)
     elif method == "fcn_pre":
         arch = "FCN_VGG16"
+        method = "fcn"
         print("arch : ", arch)
         in_shape = (in_size, in_size, 3)
         model = models.FCN_VGG16(num_classes, in_shape, l2_reg, nopad=True)
