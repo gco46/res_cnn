@@ -12,10 +12,10 @@ from keras.optimizers import SGD, Adam
 import keras.backend as K
 
 import matplotlib as mpl
-mpl.use("Agg")
 import matplotlib.pyplot as plt
 import os
 import timeit
+mpl.use("Agg")
 
 
 def train_model(method, resolution, dataset, in_size, size, step, arch,
@@ -55,7 +55,8 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
         raise ValueError("dataset must be ips or melanoma")
 
     # ネットワークの出力ユニット数指定
-    if method not in ["regression", "ce_dist", "fcn_dist", "hamming", "sigmoid"]:
+    if method not in ["regression", "ce_dist", "fcn_dist", "hamming",
+                      "sigmoid"]:
         if method == "classification":
             metrics = "accuracy"
             loss_f = "categorical_crossentropy"
@@ -440,7 +441,7 @@ if __name__ == '__main__':
         dataset = "ips_" + str(i)
         train_model(
             method="sigmoid",
-            resolution=None,
+            resolution=[1],
             dataset=dataset,
             in_size=150,
             size=300,

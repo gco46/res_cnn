@@ -922,8 +922,9 @@ class CroppingLike2D(Layer):
 
     def __init__(self, target_shape, offset=None, data_format=None,
                  **kwargs):
-        """Crop to target.
-        If only one `offset` is set, then all dimensions are offset by 
+        """
+        Crop to target.
+        If only one `offset` is set, then all dimensions are offset by
         this amount.
         """
         super(CroppingLike2D, self).__init__(**kwargs)
