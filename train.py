@@ -1,9 +1,4 @@
 # coding=utf-8
-import matplotlib as mpl
-import matplotlib.pyplot as plt
-import os
-import timeit
-
 from keras.utils import np_utils
 from keras.optimizers import SGD, Adam
 import keras.backend as K
@@ -11,12 +6,17 @@ import keras.backend as K
 from tools import Patch_DataLoader
 import tools as tl
 import models
-from generator import patch_generator
+from generators import patch_generator
 from models import softmax_sparse_crossentropy, sparse_accuracy
 from models import distribution_cross_entropy
 from models import hamming_distance
 
+import os
+import timeit
+import matplotlib as mpl
 mpl.use("Agg")
+import matplotlib.pyplot as plt
+
 # melanoma dataset に対してpatch generator使用時の分割数
 SUBSETS = 10
 
@@ -439,20 +439,20 @@ def train_fcn_model(dataset, opt, lr, epochs, batch_size, l2_reg, decay,
 if __name__ == '__main__':
     for i in range(1, 6):
         K.clear_session()
-        dataset = "ips_" + str(i)
+        dataset = "melanoma_" + str(i)
         train_model(
             method="sigmoid",
             resolution=[1],
             dataset=dataset,
             in_size=150,
             size=300,
-            step=45,
+            step=150,
             arch="vgg_p4",
             opt="Adam",
             lr=1e-4,
-            epochs=15,
+            epochs=1,
             batch_size=16,
-            l2_reg=5e-5,
+            l2_reg=0,
             decay=0,
             border_weight=None,
             binary=False
