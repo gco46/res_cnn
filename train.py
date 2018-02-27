@@ -1,20 +1,21 @@
 # coding=utf-8
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+import os
+import timeit
+
+from keras.utils import np_utils
+from keras.optimizers import SGD, Adam
+import keras.backend as K
+
 from tools import Patch_DataLoader
 import tools as tl
-# import ptools as ptl
 import models
 from generator import patch_generator
 from models import softmax_sparse_crossentropy, sparse_accuracy
 from models import distribution_cross_entropy
 from models import hamming_distance
-from keras.utils import np_utils
-from keras.optimizers import SGD, Adam
-import keras.backend as K
 
-import matplotlib as mpl
-import matplotlib.pyplot as plt
-import os
-import timeit
 mpl.use("Agg")
 
 
@@ -37,12 +38,20 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
     epochs: int, number of epochs to train
     batch_size: int, batch size
     l2_reg: float, l2 regularization value
-    decay: float, weight decay
+    decay: float, learning rate decay, see keras.io
+    border_weight: float or None
+                   if you want to set weight to patches whitch contain more
+                   than two classes, set this value from as float
+    binary: bool
+            in the case of `ce_dist`, if binary is True, then the target
+            histograms are converted to one-hot vectors
+            i.e. when you want to train with `majority`, set method to
+            `ce_dist` and binary to True.
 
     output: None
     """
     m_list = ['regression', 'classification', 'fcn', "fcn_pre",
-              'fcn_norm', 'ce_dist', 'fcn_dist', 'hamming', 'sigmoid']
+              'fcn_norm', 'ce_dist', 'hamming', 'sigmoid']
     if method not in m_list:
         raise ValueError()
 
@@ -55,7 +64,7 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
         raise ValueError("dataset must be ips or melanoma")
 
     # ネットワークの出力ユニット数指定
-    if method not in ["regression", "ce_dist", "fcn_dist", "hamming",
+    if method not in ["regression", "ce_dist", "hamming",
                       "sigmoid"]:
         if method == "classification":
             metrics = "accuracy"
@@ -72,9 +81,6 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
         if method == 'regression' or method == 'sigmoid':
             metrics = "mse"
             loss_f = "mean_squared_error"
-        elif method == 'fcn_dist':
-            metrics = sparse_accuracy
-            loss_f = softmax_sparse_crossentropy
         elif method == "ce_dist":
             metrics = distribution_cross_entropy
             loss_f = distribution_cross_entropy
@@ -107,22 +113,13 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
         print("arch : ", arch)
         in_shape = (in_size, in_size, 3)
         model = models.FCN_8s_norm(num_classes, in_shape, l2_reg, nopad=True)
-        # 今後の操作のためmethodを上書き
         method = "fcn"
-    elif method == "fcn_dist":
-        arch = "FCN_8s_dist"
-        print("arch : ", arch)
-        in_shape = (in_size, in_size, 3)
-        model = models.FCN_8s_dist(
-            num_classes, in_shape, l2_reg, out_num, nopad=True)
     else:
         print("arch :", arch)
         if arch == "vgg_p5":
             model = models.myVGG_p5(in_size, l2_reg, method, out_num)
         elif arch == "vgg_p4":
             model = models.myVGG_p4(in_size, l2_reg, method, out_num)
-        elif arch == "vgg_p4_multi":
-            model = models.myVGG_p4_multi(in_size, l2_reg, method, out_num)
         else:
             raise ValueError("unknown arch")
 
@@ -156,16 +153,10 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
                           metrics=[metrics]
                           )
         elif opt == "Adam":
-            if method == "fcn_dist":
-                model.compile(loss={"fcn_out": loss_f, "dist_out": "mse"},
-                              loss_weights={"fcn_out": 0.2, "dist_out": 1.0},
-                              optimizer=Adam(lr=lr, decay=decay),
-                              metrics=[])
-            else:
-                model.compile(loss=loss_f,
-                              optimizer=Adam(lr=lr, decay=decay),
-                              metrics=[]
-                              )
+            model.compile(loss=loss_f,
+                          optimizer=Adam(lr=lr, decay=decay),
+                          metrics=[]
+                          )
         else:
             raise ValueError("argument 'opt' is wrong.")
     else:
@@ -194,7 +185,7 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
 
     print("train on " + dataset)
     start_time = timeit.default_timer()
-    if method != "fcn" and method != "fcn_dist":
+    if method != "fcn":
         # fcn以外は.fit()で学習
         if "ips" in dataset:
             if border_weight is not None:
@@ -296,11 +287,6 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
     plt.plot(range(nb_epoch), loss, label="loss")
     if "ips" in dataset:
         plt.plot(range(nb_epoch), val_loss, label="val_loss")
-    if method == "fcn_dist":
-        val_fcn_out_loss = hist.history["val_fcn_out_loss"]
-        val_dist_out_loss = hist.history["val_dist_out_loss"]
-        plt.plot(range(nb_epoch), val_fcn_out_loss, label="val_fcn_loss")
-        plt.plot(range(nb_epoch), val_dist_out_loss, label="val_dist_loss")
     plt.legend(loc='best', fontsize=10)
     plt.grid()
     plt.xlabel("epoch")
