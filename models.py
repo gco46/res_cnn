@@ -372,7 +372,7 @@ def FCN_8s_norm(classes, in_shape, l2_reg, nopad=False):
     return model
 
 
-def FCN_VGG16(classes, in_shape, l2_reg, nopad=False, test=False):
+def FCN_8s_pretrained(classes, in_shape, l2_reg, nopad=False, test=False):
     vgg16 = VGG16(include_top=False, weights="imagenet", input_shape=in_shape)
     inputs = Input(shape=in_shape)
     if nopad:

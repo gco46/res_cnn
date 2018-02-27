@@ -95,7 +95,7 @@ def make_fcn_input(in_w, in_h, num_classes, dataset, resize_input, mode):
 
 class Patch_DataLoader(object):
     label_d = {'ips': (0, 1, 2, 3), 'melanoma': (0, 1)}
-    dist_method = ["regression", "ce_dist", "fcn_dist", "hamming", "sigmoid"]
+    dist_method = ["regression", "ce_dist", "hamming", "sigmoid"]
     # in train phase
     # ips: good -> 0, bad -> 1, bgd -> 2, others -> 3
     # melanoma: background -> 0, tumor -> 1
@@ -345,9 +345,6 @@ class Patch_DataLoader(object):
         output: vector array or np.int64 or False(bool),
                 target vector or one class label (in classification)
                 return False if patch is filled by 'others' label
-
-            if method == "fcn_dist", output is (array, array)
-            fcn target vector and distribution(regression) target
         """
         if self.method in self.dist_method:
             target = self.calcRegTarget(m_patch)
@@ -371,11 +368,6 @@ class Patch_DataLoader(object):
                     return False, False
             m_patch = self.patch_resize(m_patch)
             target = m_patch.flatten()
-            if self.method == "fcn_dist":
-                dist_target = self.calcRegTarget(m_patch)
-                if isinstance(dist_target, bool):
-                    return False, False
-                target = (target, dist_target)
 
         # others を除いたラベルでborder判定
         hist = self.class_label_hist(m_patch)

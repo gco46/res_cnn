@@ -103,11 +103,12 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
         in_shape = (in_size, in_size, 3)
         model = models.FCN_8s(num_classes, in_shape, l2_reg, nopad=True)
     elif method == "fcn_pre":
-        arch = "FCN_VGG16"
+        arch = "FCN_8s_pretrained"
         method = "fcn"
         print("arch : ", arch)
         in_shape = (in_size, in_size, 3)
-        model = models.FCN_VGG16(num_classes, in_shape, l2_reg, nopad=True)
+        model = models.FCN_8s_pretrained(
+            num_classes, in_shape, l2_reg, nopad=True)
     elif method == "fcn_norm":
         arch = "FCN_8s_norm"
         print("arch : ", arch)
@@ -327,7 +328,7 @@ def train_fcn_model(dataset, opt, lr, epochs, batch_size, l2_reg, decay,
     dir_path = os.path.join("weights/valid_all/dataset_" + str(n))
 
     if pre_train:
-        model = models.FCN_VGG16(num_classes, (in_h, in_w, 3), l2_reg)
+        model = models.FCN_8s_pretrained(num_classes, (in_h, in_w, 3), l2_reg)
     else:
         model = models.FCN_8s(num_classes, (in_h, in_w, 3), l2_reg)
     if m_path is not None:
