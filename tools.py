@@ -419,7 +419,8 @@ class Patch_DataLoader(object):
         m_patch: matrix array,
         data: str, now supported 'ips' and 'melanoma'
 
-        output: vector array, the histogram of class labels, !! dtype = float32 !!
+        output: vector array, the histogram of class labels,
+                              !! dtype = float32 !!
                 the last elements of hist is ignore label.
         """
         # label 辞書読み込み
@@ -473,14 +474,14 @@ class Patch_DataLoader(object):
         result = []
         # patchのサイズからresolutionで割る範囲を決定する
         h, w = m_patch.shape
-        local_size_h, rest_h = divmod(h, res_int)
-        local_size_w, rest_w = divmod(w, res_int)
+        sub_h, rest_h = divmod(h, res_int)
+        sub_w, rest_w = divmod(w, res_int)
 
         for h_num in range(res_int):
             for w_num in range(res_int):
                 # patchをresolutionによってさらに小さいパッチに分ける
-                patch = m_patch[local_size_h * h_num:local_size_h * (h_num + 1),
-                                local_size_w * w_num:local_size_w * (w_num + 1)]
+                patch = m_patch[sub_h * h_num:sub_h * (h_num + 1),
+                                sub_w * w_num:sub_w * (w_num + 1)]
                 hist = self.class_label_hist(patch)
                 if self.datatype == "ips":
                     # ips dataset
@@ -495,12 +496,6 @@ class Patch_DataLoader(object):
                         # histogram 正規化
                         hist = hist[:-1] / np.sum(hist[:-1])
                         result.append(hist)
-                    # elif self.method == "ce_dist":
-                    #     c_label = patch[local_size_h // 2, local_size_w // 2]
-                    #     tmp = [0, 0, 0]
-                    #     if c_label != 3:
-                    #         tmp[c_label] = 1
-                    #     result.append(tmp)
                 else:
                     # melanoma dataset
                     # histogram 正規化

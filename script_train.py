@@ -1,6 +1,6 @@
 # coding=utf-8
 from train import train_model
-from inference import test_model
+from inference import test_model, save_TestTime_saFile
 from evaluate import evaluate_model
 import shutil
 import os.path as osp
@@ -99,5 +99,6 @@ for s in size:
                 step=step,
                 label_map=False
             )
+        save_TestTime_saFile(mpath)
         mv_dirs(mpath)
         evaluate_model(mpath)

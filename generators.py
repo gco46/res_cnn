@@ -71,6 +71,11 @@ def patch_generator(in_size, size, step, dataset, batch_size, mode,
 
 
 def shuffle_samples(*args):
+    """
+    shuffle more than one 1-d arrays, associating the order.
+    arrays must be same length.
+    output: tuple, the length equals to the number of input arguments.
+    """
     zipped = list(zip(*args))
     np.random.shuffle(zipped)
     shuffled = list(zip(*zipped))

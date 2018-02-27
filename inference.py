@@ -12,7 +12,7 @@ import keras.backend as K
 
 
 def test_model(method, resolution, dataset, in_size, size, step,
-               label_map=False, model_path="valid", prob_out="fcn"):
+               label_map=False, model_path="valid"):
     """
     inference
     method: str,
@@ -22,12 +22,12 @@ def test_model(method, resolution, dataset, in_size, size, step,
     step: int,
     model_path: str, path to model path you want to test
     """
+    structured = ['regression', 'sigmoid', 'ce_dist', 'hamming']
     if method not in ['regression', 'classification', 'fcn', 'fcn_norm',
-                      'fcn_dist', 'ce_dist', 'hamming', 'fcn_pre', 'sigmoid']:
+                      'ce_dist', 'hamming', 'fcn_pre', 'sigmoid']:
         raise ValueError()
 
-    if method not in ["regression", "fcn_dist", "ce_dist", "hamming",
-                      "sigmoid"]:
+    if method not in structured:
         resolution = None
 
     if 'ips' in dataset:
@@ -72,7 +72,8 @@ def test_model(method, resolution, dataset, in_size, size, step,
 
     print("visualize the result of " + dataset)
     # 可視化画像を保存するためのディレクトリ作成
-    if method == "regression" and len(resolution) > 1:
+    # テスト時間計測のために，multi resolutionの場合は最も高い解像度のみを使用
+    if method in structured and len(resolution) > 1:
         resolution = [resolution[-1]]
     make_vis_dirs(model_path, resolution)
 
@@ -95,14 +96,7 @@ def test_model(method, resolution, dataset, in_size, size, step,
         start_time = timeit.default_timer()
         prob = model.predict(patches, batch_size=16)
         elapsed_time += timeit.default_timer() - start_time
-        if isinstance(prob, list):
-            if prob_out == "fcn":
-                prob = prob[0]
-            elif prob_out == "dist":
-                prob = prob[1]
-            else:
-                raise ValueError("prob_out is wrong")
-        if method == "regression" and len(resolution) > 1:
+        if method in structured and len(resolution) > 1:
             prob = prob[:, -resolution[-1]**2 * 3:]
         PMC = ProbMapConstructer(
             model_out=prob,
@@ -248,6 +242,18 @@ def make_vis_dirs(model_path, resolution=None):
         pass
 
 
+def save_TestTime_saFile(m_path):
+    testtime = []
+    for i in range(1, 6):
+        dataset = "dataset_" + str(i)
+        tmp = np.loadtxt(
+            os.path.join("weights", m_path, dataset, "test_time.txt")
+        )
+        testtime.append(list(tmp))
+    testtime = np.array(testtime)
+    np.savetxt(os.path.join("weights", m_path, "test_time.txt"))
+
+
 if __name__ == '__main__':
     params = [
         ("ips/regression/Adam/l2=5e-5/vgg_p4_size100_res125", 100, [1, 2, 5]),
@@ -268,9 +274,7 @@ if __name__ == '__main__':
                 step=45,
                 label_map=False,
                 model_path=m_path,
-                prob_out=None
             )
-
             tmp = np.loadtxt(
                 os.path.join("weights", m_path, "dataset_" +
                              str(i), "test_time.txt"),
@@ -291,7 +295,6 @@ if __name__ == '__main__':
     #         step=45,
     #         label_map=False,
     #         model_path="ips/regression/Adam/vgg_p4_size100_res2-2",
-    #         prob_out=None
     #     )
 
     # for i in range(1, 6):

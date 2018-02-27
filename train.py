@@ -17,6 +17,8 @@ from models import distribution_cross_entropy
 from models import hamming_distance
 
 mpl.use("Agg")
+# melanoma dataset に対してpatch generator使用時の分割数
+SUBSETS = 10
 
 
 def train_model(method, resolution, dataset, in_size, size, step, arch,
@@ -215,20 +217,26 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
                              )
         else:
             steps_per_epoch = DataLoader.num_samples // batch_size
+            val_step = test_DL.num_samples // batch_size
             hist = model.fit_generator(
                 generator=patch_generator(
                     in_size, size, step, dataset, batch_size, "train",
-                    resolution, method, 5
+                    resolution, method, SUBSETS
                 ),
                 steps_per_epoch=steps_per_epoch,
                 epochs=epochs,
+                validation_data=patch_generator(
+                    in_size, size, step, dataset, batch_size, "test",
+                    resolution, method, SUBSETS
+                ),
+                validation_steps=val_step,
                 verbose=1,
             )
     else:
         # fcnはgeneratorで学習
         steps_per_epoch = DataLoader.num_samples // batch_size
+        val_step = test_DL.num_samples // batch_size
         if "ips" in dataset:
-            val_step = test_DL.num_samples // batch_size
             hist = model.fit_generator(
                 generator=patch_generator(
                     in_size, size, step, dataset, batch_size, "train",
@@ -237,7 +245,8 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
                 epochs=epochs,
                 validation_data=patch_generator(
                     in_size, size, step, dataset, batch_size, "test",
-                    resolution, method),
+                    resolution, method
+                ),
                 validation_steps=val_step,
                 verbose=1
             )
@@ -245,8 +254,13 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
             hist = model.fit_generator(
                 generator=patch_generator(
                     in_size, size, step, dataset, batch_size, "train",
-                    resolution, method, 10),
+                    resolution, method, SUBSETS),
                 steps_per_epoch=steps_per_epoch,
+                validation_data=patch_generator(
+                    in_size, size, step, dataset, batch_size, "test",
+                    resolution, method, SUBSETS
+                ),
+                validation_steps=val_step,
                 epochs=epochs,
             )
 
