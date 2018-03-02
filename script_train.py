@@ -1,6 +1,6 @@
 # coding=utf-8
 from train import train_model
-from inference import test_model, save_TestTime_saFile
+from inference import test_model, save_TestTime_asFile
 from evaluate import evaluate_model
 import shutil
 import os.path as osp
@@ -37,12 +37,15 @@ def make_model_name(arch, size, res, fcn=False):
     return model_name
 
 
+# set parameters -------------------------------------------------------
 data = "ips"
 
 in_size = 150
 size = [100]
 step = 45
 resolution = [[2]]
+method = "regression"
+majority = False
 lr = 1e-4
 opt = "Adam"
 batch_size = 16
@@ -50,15 +53,13 @@ epochs = 1
 decay = 0
 l2_reg = 0
 arch = "vgg_p4"
+# -----------------------------------------------------------------------
 
 for s in size:
     for r in resolution:
         if r is None:
             method = "fcn"
             in_size = 224
-        else:
-            method = "sigmoid"
-            in_size = 150
         for i in range(1, 6):
             K.clear_session()
             if method == "fcn":
@@ -88,7 +89,7 @@ for s in size:
                 l2_reg=l2_reg,
                 decay=decay,
                 border_weight=None,
-                binary=False
+                binary=majority
             )
             test_model(
                 method=method,
@@ -99,6 +100,6 @@ for s in size:
                 step=step,
                 label_map=False
             )
-        save_TestTime_saFile(mpath)
+        save_TestTime_asFile(mpath)
         mv_dirs(mpath)
         evaluate_model(mpath)

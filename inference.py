@@ -242,7 +242,7 @@ def make_vis_dirs(model_path, resolution=None):
         pass
 
 
-def save_TestTime_saFile(m_path):
+def save_TestTime_asFile(m_path):
     testtime = []
     for i in range(1, 6):
         dataset = "dataset_" + str(i)
