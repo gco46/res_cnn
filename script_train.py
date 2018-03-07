@@ -68,9 +68,7 @@ for s in size:
                 model_name = make_model_name(arch, s, r, fcn=False)
             mpath = osp.join(data, method, opt, model_name)
             dataset = data + "_" + str(i)
-
-            print()
-            print()
+            print("\n")
             print("< model > ", model_name)
             print("< dataset >", dataset)
             print()

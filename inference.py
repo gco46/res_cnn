@@ -112,11 +112,9 @@ def test_model(method, resolution, dataset, in_size, size, step,
         PMC.save_InfMap(model_path, file_name)
     test_time = elapsed_time / len(img_list)
     test_time_p = elapsed_time / p_count
-    test_map_time = elapsed_map_time / len(img_list)
-    time_array = np.array([test_time, test_time_p, test_map_time])
+    time_array = np.array([test_time, test_time_p])
     print("test on %s takes %.7f s" % (dataset, test_time))
     print("test on %s takes %.7f s" % (dataset, test_time_p))
-    print("test on %s takes %.7f s" % (dataset, test_map_time))
     np.savetxt(os.path.join(model_path, "test_time.txt"), time_array)
 
 
@@ -251,7 +249,7 @@ def save_TestTime_asFile(m_path):
         )
         testtime.append(list(tmp))
     testtime = np.array(testtime)
-    np.savetxt(os.path.join("weights", m_path, "test_time.txt"))
+    np.savetxt(os.path.join("weights", m_path, "test_time.txt"), testtime)
 
 
 if __name__ == '__main__':

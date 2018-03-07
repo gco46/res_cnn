@@ -163,13 +163,18 @@ class Patch_DataLoader(object):
             mask = np.array(Image.open(mask_path))
             mask = self.image2label(mask)
             h, w = mask.shape
-            for i in range((h - size) // step + 1):
-                for j in range((w - size) // step + 1):
-                    m_patch = mask[i * step:(i * step) + size,
-                                   j * step:(j * step) + size]
-                    t, _ = self.calcTarget(m_patch)
-                    if not isinstance(t, bool):
-                        num_samples += 1
+            if "ips" in self.datatype:
+                for i in range((h - size) // step + 1):
+                    for j in range((w - size) // step + 1):
+                        m_patch = mask[i * step:(i * step) + size,
+                                       j * step:(j * step) + size]
+                        t, _ = self.calcTarget(m_patch)
+                        if not isinstance(t, bool):
+                            num_samples += 1
+            else:
+                row = (h - size) // step + 1
+                column = (w - size) // step + 1
+                num_samples += row * column
         return num_samples
 
     def load_data_two_target(self):
