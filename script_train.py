@@ -58,8 +58,10 @@ arch = "vgg_p4"
 for s in size:
     for r in resolution:
         if r is None and method not in ["fcn", "classification"]:
-            raise ValueError("resolution 'None' is available only for \
-                              fcn or classification")
+            raise ValueError(
+                "resolution 'None' is available only for "
+                "fcn or classification"
+            )
         for i in range(1, 6):
             K.clear_session()
             if method == "fcn":
