@@ -19,6 +19,8 @@ import matplotlib.pyplot as plt
 
 # melanoma dataset に対してpatch generator使用時の分割数
 SUBSETS = 10
+# melanoma dataset に対してtest時のstepを別に定義
+TEST_STEP = 100
 
 
 def train_model(method, resolution, dataset, in_size, size, step, arch,
@@ -135,10 +137,11 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
         img_list, mask_list, in_size, size, step, method, resolution,
         border_weight=border_weight
     )
-    test_DL = Patch_DataLoader(
-        test_img_list, test_mask_list, in_size, size, step, method,
-        resolution
-    )
+    if "melanoma" in dataset:
+        test_DL = Patch_DataLoader(
+            test_img_list, test_mask_list, in_size, size, TEST_STEP, method,
+            resolution
+        )
 
     # optimizer指定、モデルコンパイル
     # loss関数が引数をとる場合と場合分け
@@ -226,7 +229,7 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
                 steps_per_epoch=steps_per_epoch,
                 epochs=epochs,
                 validation_data=patch_generator(
-                    in_size, size, step, dataset, batch_size, "test",
+                    in_size, size, TEST_STEP, dataset, batch_size, "test",
                     resolution, method, SUBSETS
                 ),
                 validation_steps=val_step,
