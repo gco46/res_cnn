@@ -142,6 +142,11 @@ def train_model(method, resolution, dataset, in_size, size, step, arch,
             test_img_list, test_mask_list, in_size, size, TEST_STEP, method,
             resolution
         )
+    else:
+        test_DL = Patch_DataLoader(
+            test_img_list, test_mask_list, in_size, size, step, method,
+            resolution
+        )
 
     # optimizer指定、モデルコンパイル
     # loss関数が引数をとる場合と場合分け
