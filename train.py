@@ -429,8 +429,7 @@ def train_fcn_model(dataset, opt, lr, epochs, batch_size, l2_reg, decay,
 
     # train loss だけプロットして保存
     loss = hist.history["loss"]
-    if "ips" in dataset:
-        val_loss = hist.history["val_loss"]
+    val_loss = hist.history["val_loss"]
     nb_epoch = len(loss)
     plt.figure()
     plt.plot(range(nb_epoch), loss, label="loss")
