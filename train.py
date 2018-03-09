@@ -434,8 +434,7 @@ def train_fcn_model(dataset, opt, lr, epochs, batch_size, l2_reg, decay,
     nb_epoch = len(loss)
     plt.figure()
     plt.plot(range(nb_epoch), loss, label="loss")
-    if "ips" in dataset:
-        plt.plot(range(nb_epoch), val_loss, label="val_loss")
+    plt.plot(range(nb_epoch), val_loss, label="val_loss")
     plt.legend(loc='best', fontsize=10)
     plt.grid()
     plt.xlabel("epoch")
