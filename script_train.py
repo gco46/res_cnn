@@ -100,6 +100,6 @@ for s in size:
                 step=step,
                 label_map=False
             )
-        save_TestTime_asFile(mpath)
         mv_dirs(mpath)
+        save_TestTime_asFile(mpath)
         evaluate_model(mpath)
