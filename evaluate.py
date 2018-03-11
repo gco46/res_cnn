@@ -52,16 +52,17 @@ def evaluate_model(model, w_path="weights", mode="test"):
     acc_mean = np.mean(accuracy)
     acc_std = np.std(accuracy)
 
-    cj_nonzero = np.zeros((3,))
-    for i in range(3):
-        cj_nonzero[i] = np.count_nonzero(np.ceil(class_j[:, i]))
+    if "ips" in model:
+        cj_nonzero = np.zeros((3,))
+        for i in range(3):
+            cj_nonzero[i] = np.count_nonzero(np.ceil(class_j[:, i]))
 
-    cj_mean = np.sum(class_j, axis=0) / cj_nonzero
-    cj_std = np.zeros((3,))
-    for i in range(3):
-        cj_tmp = class_j[np.nonzero(class_j[:, i]), i].reshape(-1)
-        cj_var = np.sum(np.square(cj_tmp - cj_mean[i])) / cj_nonzero[i]
-        cj_std[i] = np.sqrt(cj_var)
+        cj_mean = np.sum(class_j, axis=0) / cj_nonzero
+        cj_std = np.zeros((3,))
+        for i in range(3):
+            cj_tmp = class_j[np.nonzero(class_j[:, i]), i].reshape(-1)
+            cj_var = np.sum(np.square(cj_tmp - cj_mean[i])) / cj_nonzero[i]
+            cj_std[i] = np.sqrt(cj_var)
     print("model : ", model)
     print("jaccard index : ", j_mean, "+- ", j_std)
     print("dice : ", d_mean, "+- ", d_std)
@@ -75,10 +76,11 @@ def evaluate_model(model, w_path="weights", mode="test"):
                        [tn_mean, tn_std],
                        [acc_mean, acc_std],
                        ])
-    cj_result = np.vstack((cj_mean, cj_std))
+    if "ips" in model:
+        cj_result = np.vstack((cj_mean, cj_std))
+        np.savetxt(os.path.join(path, "seg_result_class.txt"), cj_result)
 
     np.savetxt(os.path.join(path, "seg_result.txt"), result)
-    np.savetxt(os.path.join(path, "seg_result_class.txt"), cj_result)
 
 
 def evaluate_one_fold(directory, dataset, w_path, mode):
