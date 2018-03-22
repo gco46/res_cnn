@@ -38,18 +38,18 @@ def make_model_name(arch, size, res, fcn=False):
 
 
 # set parameters -------------------------------------------------------
-data = "ips"
+data = "melanoma"
 
 in_size = 150
-size = [100]
-step = 45
-resolution = [[2]]
-method = "regression"
+size = [50, 100, 150, 300]
+step = 35
+resolution = [[1], [2], [5], [1, 2, 5], [1, 2, 3, 4, 5]]
+method = "ce_dist"
 majority = False
 lr = 1e-4
 opt = "Adam"
-batch_size = 16
-epochs = 1
+batch_size = 64
+epochs = 15
 decay = 0
 l2_reg = 0
 arch = "vgg_p4"
