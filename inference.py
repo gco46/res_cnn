@@ -43,7 +43,7 @@ def test_model(method, resolution, dataset, in_size, size, step,
         if method == "ce_dist":
             out_num = 0
             for i in resolution:
-                out_num += i**2 * 3
+                out_num += i**2 * num_classes
             model = models.myVGG_p4(in_size, 0, method, out_num, test=True)
         else:
             model = model_from_json(
@@ -253,47 +253,47 @@ def save_TestTime_asFile(m_path):
 
 
 if __name__ == '__main__':
-    params = [
-        ("ips/regression/Adam/l2=5e-5/vgg_p4_size100_res125", 100, [1, 2, 5]),
-        ("ips/regression/Adam/l2=5e-5/vgg_p4_size150_res125", 150, [1, 2, 5]),
-        ("ips/regression/Adam/l2=5e-5/vgg_p4_size300_res125", 300, [1, 2, 5]),
-    ]
-    for m_path, size, res in params:
-        K.clear_session()
-        test_time = []
-        for i in range(1, 6):
-            dataset = "ips_" + str(i)
-            test_model(
-                method="regression",
-                resolution=res,
-                dataset=dataset,
-                in_size=150,
-                size=size,
-                step=45,
-                label_map=False,
-                model_path=m_path,
-            )
-            tmp = np.loadtxt(
-                os.path.join("weights", m_path, "dataset_" +
-                             str(i), "test_time.txt"),
-            )
-            test_time.append(list(tmp))
-        test_time = np.array(test_time)
-        np.savetxt(os.path.join("weights", m_path, "test_time.txt"), test_time)
-
-    # for i in range(1, 6):
+    # params = [
+    #     ("ips/regression/Adam/l2=5e-5/vgg_p4_size100_res125", 100, [1, 2, 5]),
+    #     ("ips/regression/Adam/l2=5e-5/vgg_p4_size150_res125", 150, [1, 2, 5]),
+    #     ("ips/regression/Adam/l2=5e-5/vgg_p4_size300_res125", 300, [1, 2, 5]),
+    # ]
+    # for m_path, size, res in params:
     #     K.clear_session()
-    #     dataset = "ips_" + str(i)
-    #     test_model(
-    #         method="regression",
-    #         resolution=[2],
-    #         dataset=dataset,
-    #         in_size=150,
-    #         size=150,
-    #         step=45,
-    #         label_map=False,
-    #         model_path="ips/regression/Adam/vgg_p4_size100_res2-2",
-    #     )
+    #     test_time = []
+    #     for i in range(1, 6):
+    #         dataset = "ips_" + str(i)
+    #         test_model(
+    #             method="regression",
+    #             resolution=res,
+    #             dataset=dataset,
+    #             in_size=150,
+    #             size=size,
+    #             step=45,
+    #             label_map=False,
+    #             model_path=m_path,
+    #         )
+    #         tmp = np.loadtxt(
+    #             os.path.join("weights", m_path, "dataset_" +
+    #                          str(i), "test_time.txt"),
+    #         )
+    #         test_time.append(list(tmp))
+    #     test_time = np.array(test_time)
+    #     np.savetxt(os.path.join("weights", m_path, "test_time.txt"), test_time)
+
+    for i in range(1, 2):
+        K.clear_session()
+        dataset = "ips_" + str(i)
+        test_model(
+            method="ce_dist",
+            resolution=[1],
+            dataset=dataset,
+            in_size=150,
+            size=50,
+            step=35,
+            label_map=False,
+            model_path="valid",
+        )
 
     # for i in range(1, 6):
     #     dataset = "ips_" + str(i)
