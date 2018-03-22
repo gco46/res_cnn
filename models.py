@@ -42,7 +42,7 @@ def bilinear_upsample_weights(factor, n_class):
     return weights
 
 
-def myVGG_p4(size, l2_reg, method, out_num, test=False):
+def myVGG_p4(size, l2_reg, method, out_num, num_classes=None, test=False):
     if method == "classification":
         out_act = "softmax"
     elif method == "sigmoid":
@@ -96,7 +96,7 @@ def myVGG_p4(size, l2_reg, method, out_num, test=False):
     model.add(Dense(out_num, activation=out_act,
                     kernel_regularizer=l2(l2_reg)))
     if test and method == "ce_dist":
-        model.add(Reshape((-1, 3)))
+        model.add(Reshape((-1, num_classes)))
         model.add(Activation("softmax"))
         model.add(Flatten())
 

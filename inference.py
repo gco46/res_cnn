@@ -44,7 +44,8 @@ def test_model(method, resolution, dataset, in_size, size, step,
             out_num = 0
             for i in resolution:
                 out_num += i**2 * num_classes
-            model = models.myVGG_p4(in_size, 0, method, out_num, test=True)
+            model = models.myVGG_p4(
+                in_size, 0, method, out_num, num_classes, test=True)
         else:
             model = model_from_json(
                 open(os.path.join(model_path, "train_arch.json")).read())
@@ -283,7 +284,7 @@ if __name__ == '__main__':
 
     for i in range(1, 2):
         K.clear_session()
-        dataset = "ips_" + str(i)
+        dataset = "melanoma_" + str(i)
         test_model(
             method="ce_dist",
             resolution=[1],
